@@ -6,8 +6,8 @@ import { email } from '../../assets/images';
 const WelcomeScreen = ({ navigation }) => {
     return (
         <Onboarding
-            onDone={() => navigation.replace('RegisterScreen')}
-            onSkip={() => navigation.replace('RegisterScreen')}
+            onDone={() => navigation.replace('Auth', { screen: 'Register' })}
+            onSkip={() => navigation.replace('Auth', { screen: 'Register' })}
             pages={[
                 {
                     backgroundColor: '#E6F0FA',

@@ -66,7 +66,10 @@ const SplashScreen = ({ navigation }) => {
             }).start();
         }, 1000);
         setTimeout(() => {
-            navigation.replace('WelcomeScreen');
+            navigation.replace('Auth', {
+                screen: 'Welcome',
+            });
+
         }, 3000);
     }, []);
 

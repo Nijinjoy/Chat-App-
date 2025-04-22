@@ -15,23 +15,7 @@ const RegisterScreen = ({ navigation }) => {
     };
 
     const handleRegister = () => {
-        // Simple validation
-        const newErrors = {};
-        if (!form.fullName) newErrors.fullName = 'Name is required';
-        if (!form.email.includes('@')) newErrors.email = 'Invalid email';
-        if (form.password.length < 6) newErrors.password = 'Password too short';
-        if (form.password !== form.confirmPassword) newErrors.confirmPassword = 'Passwords must match';
-
-        setErrors(newErrors);
-        if (Object.keys(newErrors).length) return;
-
-        setLoading(true);
-        // Simulate registration
-        setTimeout(() => {
-            setLoading(false);
-            Alert.alert('Success', 'Registration successful');
-            navigation.navigate('LoginScreen');
-        }, 1500);
+        navigation.replace('App');
     };
 
     return (
