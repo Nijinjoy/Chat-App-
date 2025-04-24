@@ -6,23 +6,20 @@ import SplashScreen from '../screens/auth/SplashScreen';
 
 const RootStack = createNativeStackNavigator();
 
-export default function RootNavigator() {
+export default function RootNavigator({ user }) {
     return (
         <NavigationContainer>
-            <RootStack.Navigator
-                initialRouteName="Splash"
-                screenOptions={{
-                    headerShown: false,
-                    animation: 'none'
-                }}
-            >
+            <RootStack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
                 <RootStack.Screen name="Splash" component={SplashScreen} />
-                <RootStack.Screen
-                    name="Auth"
-                    component={AuthStack}
-                    initialParams={{ initialRoute: AUTH_ROUTES.WELCOME }} // 👈 pass this
-                />
-                <RootStack.Screen name="App" component={AppStack} />
+                {!user ? (
+                    <RootStack.Screen
+                        name="Auth"
+                        component={AuthStack}
+                        initialParams={{ initialRoute: AUTH_ROUTES.WELCOME }}
+                    />
+                ) : (
+                        <RootStack.Screen name="App" component={AppStack} />
+                )}
             </RootStack.Navigator>
         </NavigationContainer>
     );

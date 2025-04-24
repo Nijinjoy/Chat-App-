@@ -1,19 +1,20 @@
-// import 'react-native-gesture-handler';
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
 import RootNavigator from './src/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
+import { UserProvider } from './src/context/UserContext';
+
 
 export default function App() {
+
   return (
-    <GestureHandlerRootView style={styles.container}>
-      {/* <NavigationContainer> */}
-      <RootNavigator />
+    <UserProvider>
+      <GestureHandlerRootView style={styles.container}>
+        <RootNavigator />
         <StatusBar style="auto" />
-      {/* </NavigationContainer> */}
     </GestureHandlerRootView>
+    </UserProvider>
   );
 }
 

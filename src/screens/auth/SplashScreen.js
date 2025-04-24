@@ -1,6 +1,7 @@
 import { View, Text, Image, StyleSheet, Animated, Easing } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 import { logo } from '../../assets/images';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SplashScreen = ({ navigation }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -11,12 +12,29 @@ const SplashScreen = ({ navigation }) => {
 
     const colors = {
         bg: '#1E1E2D',
-        primary: '#07C160', // WhatsApp-like green
+        primary: '#07C160',
         text: '#FFFFFF',
         mutedText: 'rgba(255,255,255,0.7)'
     };
 
     useEffect(() => {
+        // Start the pulsing circle animation loop
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(circlePulse, {
+                    toValue: 1,
+                    duration: 1500,
+                    useNativeDriver: false
+                }),
+                Animated.timing(circlePulse, {
+                    toValue: 0,
+                    duration: 1000,
+                    useNativeDriver: false
+                })
+            ])
+        ).start();
+
+        // Run the main animation sequence
         Animated.parallel([
             Animated.sequence([
                 Animated.timing(fadeAnim, {
@@ -40,37 +58,28 @@ const SplashScreen = ({ navigation }) => {
                 duration: 1000,
                 easing: Easing.out(Easing.exp),
                 useNativeDriver: true
-            }),
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(circlePulse, {
-                        toValue: 1,
-                        duration: 1500,
-                        useNativeDriver: false
-                    }),
-                    Animated.timing(circlePulse, {
-                        toValue: 0,
-                        duration: 1000,
-                        useNativeDriver: false
-                    })
-                ])
-            )
-        ]).start();
-
-        setTimeout(() => {
+            })
+        ]).start(() => {
             Animated.timing(progressAnim, {
                 toValue: 1,
                 duration: 2000,
                 easing: Easing.linear,
                 useNativeDriver: false
-            }).start();
-        }, 1000);
-        setTimeout(() => {
-            navigation.replace('Auth', {
-                screen: 'Welcome',
+            }).start(async () => {
+                try {
+                    const userUid = await AsyncStorage.getItem('userUid');
+                    if (userUid) {
+                        navigation.replace('App');
+                    } else {
+                        navigation.replace('Auth', {
+                            screen: 'Welcome',
+                        });
+                    }
+                } catch (error) {
+                    console.log("Error checking AsyncStorage: ", error);
+                }
             });
-
-        }, 3000);
+        });
     }, []);
 
     const circleSize = circlePulse.interpolate({
@@ -131,41 +140,41 @@ const SplashScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
-    },
-    circle: {
-        position: 'absolute',
-        borderRadius: 1000,
-        borderWidth: 1,
-        width: 100,
-        height: 100,
+        justifyContent: 'center'
     },
     logo: {
-        width: 100,
-        height: 100,
+        width: 120,
+        height: 120
     },
     appName: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: 'bold',
         textAlign: 'center'
     },
     tagline: {
         fontSize: 16,
-        textAlign: 'center'
+        textAlign: 'center',
+        marginTop: 4
     },
     progressContainer: {
-        position: 'absolute',
-        bottom: 50,
-        width: '40%',
-        height: 4,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 2,
-        overflow: 'hidden'
+        height: 6,
+        width: '80%',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginTop: 40
     },
     progressBar: {
         height: '100%',
-        borderRadius: 2
+        borderRadius: 10
+    },
+    circle: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 2
     }
 });
 

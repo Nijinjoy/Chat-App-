@@ -1,23 +1,49 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import ChatListScreen from '../screens/main/ChatListScreen';
+import ChatScreen from '../screens/main/ChatScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import SettingsScreen from '../screens/main/SettingScreen';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 
 export const APP_ROUTES = {
     CHATS: 'Chats',
-    CALLS: 'Calls',
     PROFILE: 'Profile',
     SETTINGS: 'Settings',
+    CHAT_DETAIL: 'ChatDetail',
 };
+
+const ChatStack = createStackNavigator();
+
+const ChatStackScreen = () => (
+    <ChatStack.Navigator
+        screenOptions={{
+            headerShown: false
+        }}
+    >
+        <ChatStack.Screen
+            name="ChatList"
+            component={ChatListScreen}
+            options={{ tabBarVisible: true }}
+        />
+        <ChatStack.Screen
+            name={APP_ROUTES.CHAT_DETAIL}
+            component={ChatScreen}
+            options={{
+                tabBarVisible: false,
+                headerShown: false
+            }}
+        />
+    </ChatStack.Navigator>
+);
 
 const Tab = createBottomTabNavigator();
 
 const TabBarIcon = ({ routeName, focused, color, size }) => {
     const iconMap = {
         [APP_ROUTES.CHATS]: focused ? 'chatbubbles' : 'chatbubbles-outline',
-        // [APP_ROUTES.CALLS]: focused ? 'call' : 'call-outline',
         [APP_ROUTES.PROFILE]: focused ? 'person' : 'person-outline',
         [APP_ROUTES.SETTINGS]: focused ? 'settings' : 'settings-outline',
     };
@@ -38,7 +64,7 @@ export default function AppStack() {
                         size={size}
                     />
                 ),
-                tabBarActiveTintColor: '#007AFF',
+                tabBarActiveTintColor: 'blue',
                 tabBarInactiveTintColor: 'gray',
                 tabBarLabelStyle: {
                     fontSize: 12,
@@ -46,19 +72,43 @@ export default function AppStack() {
                 },
                 tabBarStyle: {
                     height: 60,
+                    paddingBottom: 0,
                     paddingTop: 8,
-                    backgroundColor: '#ffffff',
                     borderTopWidth: 0,
                     elevation: 10,
+                    shadowColor: '#000',
                     shadowOpacity: 0.1,
+                    shadowOffset: { width: 0, height: -1 },
                 },
                 headerShown: false,
             })}
         >
             <Tab.Screen
                 name={APP_ROUTES.CHATS}
-                component={ChatListScreen}
-                options={{ title: 'Chats' }}
+                component={ChatStackScreen}
+                options={({ route }) => {
+                    // Get the current nested route name
+                    const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatList';
+
+                    // Hide tab bar if not on ChatList
+                    const isChatList = routeName === 'ChatList';
+
+                    return {
+                        title: 'Chats',
+                        tabBarStyle: {
+                            display: isChatList ? 'flex' : 'none',
+                            height: 60,
+                            paddingTop: 8,
+                            paddingBottom: 0,
+                            backgroundColor: '#ffffff',
+                            borderTopWidth: 0,
+                            elevation: 10,
+                            shadowColor: '#000',
+                            shadowOpacity: 0.1,
+                            shadowOffset: { width: 0, height: -1 },
+                        },
+                    };
+                }}
             />
 
             <Tab.Screen

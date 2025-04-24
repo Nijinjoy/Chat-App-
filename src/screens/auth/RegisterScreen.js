@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { email } from '../../assets/images';
+import { registerWithEmail } from '../../firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../../context/UserContext';
 
 const RegisterScreen = ({ navigation }) => {
+    const { setUserInfo } = useUserContext();
     const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
@@ -14,8 +18,62 @@ const RegisterScreen = ({ navigation }) => {
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
     };
 
-    const handleRegister = () => {
-        navigation.replace('App');
+    const validate = () => {
+        let valid = true;
+        const newErrors = {};
+
+        if (!form.fullName.trim()) {
+            newErrors.fullName = "Full name is required";
+            valid = false;
+        }
+        if (!form.email.includes("@")) {
+            newErrors.email = "Enter a valid email";
+            valid = false;
+        }
+        if (form.password.length < 3) {
+            newErrors.password = "Password must be at least 3 characters";
+            valid = false;
+        }
+        if (form.password !== form.confirmPassword) {
+            newErrors.confirmPassword = "Passwords do not match";
+            valid = false;
+        }
+
+        setErrors(newErrors);
+        return valid;
+    };
+
+    const handleRegister = async () => {
+        if (!validate()) return;
+        setLoading(true);
+        const result = await registerWithEmail(form.email, form.password, form.fullName);
+        console.log("result===>", result);
+
+        if (result.success) {
+            try {
+                await AsyncStorage.setItem('userUid', result.user.uid);
+                await AsyncStorage.setItem('userDisplayName', result.user.displayName);
+                await AsyncStorage.setItem('userEmail', result.user.email);
+            } catch (error) {
+                console.log("Error saving data to AsyncStorage: ", error);
+            }
+
+            const setUserInfo = {
+                uid: result.user.uid,
+                displayName: result.user.displayName,
+                email: result.user.email,
+            };
+
+            Alert.alert("Success", "Account created successfully");
+
+            setTimeout(() => {
+                setLoading(false);
+                navigation.replace('App');
+            }, 1000);
+        } else {
+            setLoading(false);
+            Alert.alert("Error", result.error || "Registration failed");
+        }
     };
 
     return (
