@@ -1,15 +1,18 @@
 import { View, Text, Image, StyleSheet, Animated, Easing } from 'react-native';
 import React, { useEffect, useRef } from 'react';
 import { logo } from '../../assets/images';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../../context/UserContext';
 
 const SplashScreen = ({ navigation }) => {
+    // Animation refs and context
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const logoScale = useRef(new Animated.Value(0.8)).current;
     const textSlide = useRef(new Animated.Value(30)).current;
     const progressAnim = useRef(new Animated.Value(0)).current;
     const circlePulse = useRef(new Animated.Value(0)).current;
+    const { user, authChecked } = useUser();
 
+    // Color scheme
     const colors = {
         bg: '#1E1E2D',
         primary: '#07C160',
@@ -17,8 +20,9 @@ const SplashScreen = ({ navigation }) => {
         mutedText: 'rgba(255,255,255,0.7)'
     };
 
+    // Animation setup
     useEffect(() => {
-        // Start the pulsing circle animation loop
+        // Pulse animation
         Animated.loop(
             Animated.sequence([
                 Animated.timing(circlePulse, {
@@ -34,7 +38,7 @@ const SplashScreen = ({ navigation }) => {
             ])
         ).start();
 
-        // Run the main animation sequence
+        // Main animation sequence
         Animated.parallel([
             Animated.sequence([
                 Animated.timing(fadeAnim, {
@@ -59,29 +63,27 @@ const SplashScreen = ({ navigation }) => {
                 easing: Easing.out(Easing.exp),
                 useNativeDriver: true
             })
-        ]).start(() => {
+        ]).start();
+    }, []);
+
+    // Navigation handler
+    useEffect(() => {
+        if (authChecked) {
             Animated.timing(progressAnim, {
                 toValue: 1,
                 duration: 2000,
                 easing: Easing.linear,
                 useNativeDriver: false
-            }).start(async () => {
-                try {
-                    const userUid = await AsyncStorage.getItem('userUid');
-                    if (userUid) {
-                        navigation.replace('App');
-                    } else {
-                        navigation.replace('Auth', {
-                            screen: 'Welcome',
-                        });
-                    }
-                } catch (error) {
-                    console.log("Error checking AsyncStorage: ", error);
-                }
+            }).start(() => {
+                navigation.replace(
+                    user ? 'App' : 'Auth',
+                    user ? {} : { screen: 'Welcome' }
+                );
             });
-        });
-    }, []);
+        }
+    }, [user, authChecked]);
 
+    // Animation interpolations
     const circleSize = circlePulse.interpolate({
         inputRange: [0, 1],
         outputRange: [0, 20]
@@ -93,7 +95,8 @@ const SplashScreen = ({ navigation }) => {
     });
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.bg }]}>
+        <View style={styles.container}>
+            {/* Background circle animation */}
             <Animated.View style={[
                 styles.circle,
                 {
@@ -102,22 +105,36 @@ const SplashScreen = ({ navigation }) => {
                     borderColor: colors.primary
                 }
             ]} />
+
+            {/* Logo with animation */}
             <Animated.View style={{
                 opacity: fadeAnim,
                 transform: [{ scale: logoScale }],
                 marginBottom: 20
             }}>
-                <Image
-                    source={logo}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
+                <Image source={logo} style={styles.logo} resizeMode="contain" />
             </Animated.View>
+
+            {/* App info with animation */}
             <Animated.View style={{ transform: [{ translateY: textSlide }] }}>
                 <Text style={[styles.appName, { color: colors.text }]}>WeChat</Text>
                 <Text style={[styles.tagline, { color: colors.mutedText }]}>
                     Connect. Chat. Explore.
                 </Text>
+
+                {/* User info display - only shows when user exists */}
+                {user && (
+                    <View style={styles.userInfoContainer}>
+                        <Text style={styles.userInfoText}>
+                            Email: <Text style={{ color: colors.primary }}>{user.email}</Text>
+                        </Text>
+                        <Text style={styles.userInfoText}>
+                            User ID: <Text style={{ color: colors.primary }}>
+                                {user.uid.substring(0, 10)}...
+                            </Text>
+                        </Text>
+                    </View>
+                )}
             </Animated.View>
 
             {/* Progress bar */}
@@ -137,45 +154,55 @@ const SplashScreen = ({ navigation }) => {
     );
 };
 
+// Styles
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        justifyContent: 'center'
-    },
-    logo: {
-        width: 120,
-        height: 120
-    },
-    appName: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        textAlign: 'center'
-    },
-    tagline: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginTop: 4
-    },
-    progressContainer: {
-        height: 6,
-        width: '80%',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: 10,
-        overflow: 'hidden',
-        marginTop: 40
-    },
-    progressBar: {
-        height: '100%',
-        borderRadius: 10
     },
     circle: {
         position: 'absolute',
+        borderRadius: 100,
+        borderWidth: 1,
+    },
+    logo: {
         width: 120,
         height: 120,
-        borderRadius: 60,
-        borderWidth: 2
-    }
+    },
+    appName: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    tagline: {
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 8,
+    },
+    progressContainer: {
+        width: '60%',
+        height: 4,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        marginTop: 40,
+        borderRadius: 2,
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+    },
+    userInfoContainer: {
+        marginTop: 20,
+        padding: 10,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    userInfoText: {
+        fontSize: 12,
+        marginVertical: 4,
+        color: '#FFFFFF',
+    },
 });
 
 export default SplashScreen;

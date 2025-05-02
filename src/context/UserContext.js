@@ -1,25 +1,46 @@
-import React, { createContext, useState, useContext } from 'react';
+// UserContext.js
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { auth } from '../firebase/config';
+import { onAuthStateChanged } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Create a User Context
 const UserContext = createContext();
 
-// Create a provider component
 export const UserProvider = ({ children }) => {
-    const [user, setUser] = useState(null); // Default value is null (no user logged in)
+    const [user, setUser] = useState(null);
+    const [authChecked, setAuthChecked] = useState(false);
 
-    // Function to update user details (this can be used to set user after login)
-    const setUserDetails = (userData) => {
-        setUser(userData);
-    };
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userData = {
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    displayName: firebaseUser.displayName
+                };
+                setUser(userData);
+                await AsyncStorage.setItem('user', JSON.stringify(userData));
+            } else {
+                setUser(null);
+                await AsyncStorage.removeItem('user');
+            }
+            setAuthChecked(true);
+        });
+
+        return unsubscribe;
+    }, []);
 
     return (
-        <UserContext.Provider value={{ user, setUserDetails }}>
+        <UserContext.Provider value={{ user, setUser, authChecked }}>
             {children}
         </UserContext.Provider>
     );
 };
 
-// Custom hook to use the UserContext
 export const useUser = () => {
-    return useContext(UserContext);
+    const context = useContext(UserContext);
+    if (context === undefined) {
+        throw new Error('useUser must be used within a UserProvider');
+    }
+    return context;
 };

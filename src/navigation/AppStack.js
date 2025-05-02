@@ -32,7 +32,7 @@ const ChatStackScreen = () => (
             name={APP_ROUTES.CHAT_DETAIL}
             component={ChatScreen}
             options={{
-                tabBarVisible: false,
+                tabBarStyle: { display: 'none' },
                 headerShown: false
             }}
         />

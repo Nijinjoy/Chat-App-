@@ -7,11 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../../context/UserContext';
 
 const RegisterScreen = ({ navigation }) => {
-    const { setUserInfo } = useUserContext();
     const [form, setForm] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const { setUser } = useUser(); 
 
     const handleChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
@@ -43,36 +43,30 @@ const RegisterScreen = ({ navigation }) => {
         return valid;
     };
 
+
     const handleRegister = async () => {
         if (!validate()) return;
         setLoading(true);
-        const result = await registerWithEmail(form.email, form.password, form.fullName);
-        console.log("result===>", result);
-
-        if (result.success) {
-            try {
-                await AsyncStorage.setItem('userUid', result.user.uid);
-                await AsyncStorage.setItem('userDisplayName', result.user.displayName);
-                await AsyncStorage.setItem('userEmail', result.user.email);
-            } catch (error) {
-                console.log("Error saving data to AsyncStorage: ", error);
-            }
-
-            const setUserInfo = {
-                uid: result.user.uid,
-                displayName: result.user.displayName,
-                email: result.user.email,
-            };
-
-            Alert.alert("Success", "Account created successfully");
-
-            setTimeout(() => {
-                setLoading(false);
+        try {
+            const result = await registerWithEmail(form.email, form.password, form.fullName);
+            if (result.success) {
+                console.log('Firebase user object:', result.user);
+                setUser({
+                    uid: result.user.uid,
+                    email: result.user.email,
+                    displayName: result.user.displayName || form.fullName
+                });
+                console.log('Context should be updated now');
+                Alert.alert("Successfull")
                 navigation.replace('App');
-            }, 1000);
-        } else {
+            } else {
+                Alert.alert("Error", result.error);
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            Alert.alert("Error", error.message);
+        } finally {
             setLoading(false);
-            Alert.alert("Error", result.error || "Registration failed");
         }
     };
 

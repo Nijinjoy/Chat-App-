@@ -9,12 +9,12 @@ import { UserProvider } from './src/context/UserContext';
 export default function App() {
 
   return (
-    <UserProvider>
       <GestureHandlerRootView style={styles.container}>
+      <UserProvider>
         <RootNavigator />
         <StatusBar style="auto" />
+      </UserProvider>
     </GestureHandlerRootView>
-    </UserProvider>
   );
 }
 
