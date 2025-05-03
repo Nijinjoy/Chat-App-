@@ -6,8 +6,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { email } from '../../assets/images';
+import { login } from '../../services/authService';
 
-const LoginScreen = ({ navigation, setIsLoggedIn }) => {
+const LoginScreen = ({ navigation }) => {
     const [form, setForm] = useState({ email: '', password: '' });
     const [errors, setErrors] = useState({
         email: '',
@@ -22,27 +23,42 @@ const LoginScreen = ({ navigation, setIsLoggedIn }) => {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
     }
+
     const handleLogin = async () => {
-        const { isValid, errors: validationErrors } = validateLoginForm(form);
-        setErrors(validationErrors);
-        if (!isValid) {
+        let hasError = false;
+        const newErrors = { email: '', password: '' };
+
+        if (!form.email) {
+            newErrors.email = 'Email is required';
+            hasError = true;
+        }
+        if (!form.password) {
+            newErrors.password = 'Password is required';
+            hasError = true;
+        }
+
+        if (hasError) {
+            setErrors(newErrors);
             return;
         }
+
         setLoading(true);
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
-            const user = userCredential.user;
-            const idToken = await user.getIdToken();
-            const refreshToken = user.stsTokenManager.refreshToken;
-            const uid = user.uid;
-            const userEmail = user.email;
-            await storeTokens(idToken, refreshToken, uid, userEmail);
-            // setIsLoggedIn(true);
-            Alert.alert("Success", "Login Successful!");
-        } catch (error) {
-            Alert.alert("Login Failed", error.message);
+            const { data, error } = await login({
+                email: form.email,
+                password: form.password,
+            });
+            console.log('Login Data Response:', data);
+            if (error) {
+                Alert.alert('Login Failed', error.message);
+            } else {
+                navigation.navigate('Home');
+            }
+        } catch (err) {
+            Alert.alert('Error', err.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (

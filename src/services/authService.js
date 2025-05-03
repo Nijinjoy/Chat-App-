@@ -1,28 +1,25 @@
-// # Authentication methods
-import { firebase } from '../constants/Firestore';
+// import { supabase } from "./supabase";
+import { supabase } from "./supabase";
 
-export const signUp = async (email, password) => {
-    try {
-        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-        return userCredential.user;
-    } catch (error) {
-        throw error;
-    }
+// services/authService.js
+export const signUp = async ({ fullName, email, password, phone }) => {
+    return await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                full_name: fullName,
+                phone,
+            },
+        }
+    });
 };
 
-export const login = async (email, password) => {
-    try {
-        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-        return userCredential.user;
-    } catch (error) {
-        throw error;
-    }
-};
 
-export const logout = async () => {
-    try {
-        await firebase.auth().signOut();
-    } catch (error) {
-        throw error;
-    }
+// services/authService.js
+export const login = async ({ email, password }) => {
+    return await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
 };

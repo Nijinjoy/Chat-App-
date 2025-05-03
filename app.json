@@ -2,6 +2,7 @@
   "expo": {
     "name": "WeChat",
     "slug": "chatapp_reactnative",
+      "scheme": "wechat",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,7 +24,19 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.impetors.chatapp_reactnative"
+      "package": "com.impetors.chatapp_reactnative",
+      "intentFilters": [ 
+      {
+        "action": "VIEW",
+        "data": [
+          {
+            "scheme": "wechat",
+            "host": "verify-email"
+          }
+        ],
+        "category": ["BROWSABLE", "DEFAULT"]
+      }
+    ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
