@@ -12,34 +12,29 @@ export default function RootNavigator({ user }) {
           <RootStack.Navigator
               screenOptions={{
                   headerShown: false,
-                  animation: 'none' // Disable default animations for root transitions
+                    animation: 'none' 
               }}
               initialRouteName="Splash"
-          >
-              {/* Splash Screen - Always loads first */}
+            >
               <RootStack.Screen
                   name="Splash"
                   component={SplashScreen}
-                  options={{ animation: 'none' }} // No animation for splash
-              />
-
-              {/* Auth Stack - Shown when user is not logged in */}
+                    options={{ animation: 'none' }}
+                />
               <RootStack.Screen
                   name="Auth"
                   component={AuthStack}
                   options={{
-                      animation: 'fade', // Smooth fade transition from splash
-                      gestureEnabled: false // Disable back gesture to splash
+                      animation: 'fade',
+                      gestureEnabled: false 
                   }}
-              />
-
-              {/* App Stack - Shown when user is logged in */}
+                />
               <RootStack.Screen
                   name="App"
                   component={AppStack}
                   options={{
-                      animation: 'fade', // Smooth fade transition from splash
-                      gestureEnabled: false // Disable back gesture to splash
+                      animation: 'fade',
+                      gestureEnabled: false
                   }}
               />
           </RootStack.Navigator>

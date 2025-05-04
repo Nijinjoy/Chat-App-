@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,7 @@ const { width } = Dimensions.get('window');
 const WelcomeScreen = () => {
     const navigation = useNavigation();
     const [currentIndex, setCurrentIndex] = useState(0);
+    const animationRefs = useRef([]);
 
     const slides = [
         {
@@ -33,9 +34,10 @@ const WelcomeScreen = () => {
 
     const scrollTo = () => {
         if (currentIndex < slides.length - 1) {
+            animationRefs.current[currentIndex + 1]?.play();
             setCurrentIndex(currentIndex + 1);
         } else {
-            navigation.navigate('Auth');
+            navigation.replace('Auth', { screen: 'Register' });
         }
     };
 
