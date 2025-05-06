@@ -1,198 +1,440 @@
 import {
     View,
-    Text,
-    ScrollView,
-    StyleSheet,
+    Text, 
+    StyleSheet, 
+    Switch, 
     TouchableOpacity,
-    Image,
-    Switch,
-    Pressable
+    Image, 
+    SafeAreaView,
+    StatusBar,
+    Platform,
+    FlatList,
+    Alert
 } from 'react-native';
-import React from 'react';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { getAuth, signOut } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { supabase } from '../../services/supabase';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../store/auth.store';
+import { useTheme } from '../../contexts/ThemeContext';
+import { registerForPushNotificationsAsync } from '../../utils/notificationService';
+import { AUTH_ROUTES } from '../../navigation/AuthStack';
 
 const SettingScreen = () => {
-    const auth = getAuth();
     const navigation = useNavigation();
-    const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-    const [darkModeEnabled, setDarkModeEnabled] = React.useState(false);
+    const { user, signOut } = useAuthStore(state => state);
+    const [darkMode, setDarkMode] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-    const settingsItems = [
-        {
-            icon: <Ionicons name="key" size={24} color="#075E54" />,
-            title: "Account",
-            description: "Privacy, security, change number"
-        },
-        {
-            icon: <Ionicons name="chatbubbles" size={24} color="#075E54" />,
-            title: "Chats",
-            description: "Theme, wallpapers, chat history"
-        },
-        {
-            icon: <Ionicons name="notifications" size={24} color="#075E54" />,
-            title: "Notifications",
-            description: "Message, group & call tones",
-            rightComponent: (
-                <Switch
-                    value={notificationsEnabled}
-                    onValueChange={setNotificationsEnabled}
-                    thumbColor={notificationsEnabled ? "#075E54" : "#f4f3f4"}
-                    trackColor={{ false: "#767577", true: "#075E5490" }}
-                />
-            )
-        },
-        {
-            icon: <Ionicons name="help-circle" size={24} color="#075E54" />,
-            title: "Help",
-            description: "Help center, contact us, privacy policy"
-        },
-        {
-            icon: <MaterialIcons name="people" size={24} color="#075E54" />,
-            title: "Invite a friend",
-            description: ""
-        },
-        {
-            icon: <Ionicons name="moon" size={24} color="#075E54" />,
-            title: "Dark Mode",
-            description: "",
-            rightComponent: (
-                <Switch
-                    value={darkModeEnabled}
-                    onValueChange={setDarkModeEnabled}
-                    thumbColor={darkModeEnabled ? "#075E54" : "#f4f3f4"}
-                    trackColor={{ false: "#767577", true: "#075E5490" }}
-                />
-            )
-        },
-    ];
+    console.log("setuser===>", user);
 
-    const onLogout = () => {
-        const auth = getAuth();
-        signOut(auth)
-            .then(() => {
-                if (navigation && navigation.reset) {
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'LoginScreen' }],
-                    });
-                } else {
-                    navigation.navigate('LoginScreen');
-                }
-            })
-            .catch((error) => {
-                console.log('Logout error: ', error?.message || error);
-            });
+    const updatePushToken = async (enabled) => {
+        if (enabled) {
+            const token = await registerForPushNotificationsAsync();
+            if (token) {
+                await supabase
+                    .from('users')
+                    .update({ expo_push_token: token })
+                    .eq('id', user.id);
+            }
+        } else {
+            // Optionally remove or clear the token
+            await supabase
+                .from('users')
+                .update({ expo_push_token: null })
+                .eq('id', user.id);
+        }
     };
 
+    const handleNotificationToggle = async (value) => {
+        setNotificationsEnabled(value);
+        await updatePushToken(value);
+    };
+
+    const handleSignOut = async () => {
+        Alert.alert(
+            'Confirm Logout',
+            'Are you sure you want to sign out?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const { error } = await supabase.auth.signOut();
+                            if (error) throw error;
+
+                            signOut(); // From your auth store
+
+                            navigation.replace('Auth', { screen: 'Login' });
+                        } catch (error) {
+                            console.error('Error signing out:', error.message);
+                            Alert.alert(
+                                'Error',
+                                error.message || 'Failed to sign out'
+                            );
+                        }
+                    },
+                },
+            ],
+            { cancelable: true }
+        );
+    };
+
+    const handleDeleteAccount = async () => {
+
+    };
+
+    const sections = [
+        {
+            id: 'profile',
+            renderItem: () => (
+                <View style={styles.profileSection}>
+                    {user?.user_metadata?.avatar_url ? (
+                        <Image
+                            source={{ uri: user.user_metadata.avatar_url }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={[
+                            styles.avatarPlaceholder,
+                            darkMode && styles.darkAvatarPlaceholder
+                        ]}>
+                            <Text style={styles.avatarText}>
+                                {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
+                            </Text>
+                        </View>
+                    )}
+                    <View style={styles.profileInfo}>
+                        <Text style={[
+                            styles.name,
+                            darkMode && styles.darkText
+                        ]}>
+                            {user?.user_metadata?.full_name || 'User'}
+                        </Text>
+                        <Text style={[
+                            styles.email,
+                            darkMode && styles.darkSecondaryText
+                        ]}>
+                            {user?.email}
+                        </Text>
+                    </View>
+                </View>
+            )
+        },
+        {
+            id: 'preferences',
+            title: 'Preferences',
+            renderItem: () => (
+                <View style={[
+                    styles.section,
+                    darkMode && styles.darkSection
+                ]}>
+                    <Text style={[
+                        styles.sectionTitle,
+                        darkMode && styles.darkSectionTitle
+                    ]}>
+                        Preferences
+                    </Text>
+                    <View style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Dark Mode
+                        </Text>
+                        <Switch
+                            value={darkMode}
+                            onValueChange={setDarkMode}
+                            trackColor={{ false: '#767577', true: '#81b0ff' }}
+                            thumbColor={darkMode ? '#f5dd4b' : '#f4f3f4'}
+                        />
+                    </View>
+                    <View style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Notifications
+                        </Text>
+                        <Switch
+                            value={notificationsEnabled}
+                            onValueChange={handleNotificationToggle}
+                            trackColor={{ false: '#767577', true: '#81b0ff' }}
+                            thumbColor={notificationsEnabled ? '#f5dd4b' : '#f4f3f4'}
+                        />
+
+                    </View>
+                </View>
+            )
+        },
+        {
+            id: 'actions',
+            renderItem: () => (
+                <>
+                    <TouchableOpacity
+                        style={[
+                            styles.signOutButton,
+                            darkMode && styles.darkSignOutButton
+                        ]}
+                        onPress={handleSignOut}
+                    >
+                        <Text style={styles.signOutText}>Sign Out</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.deleteAccountButton,
+                            darkMode && styles.darkDeleteAccountButton
+                        ]}
+                        onPress={handleDeleteAccount}
+                    >
+                        <Text style={[
+                            styles.deleteAccountText,
+                            darkMode && styles.darkDeleteAccountText
+                        ]}>
+                            Delete Account
+                        </Text>
+                    </TouchableOpacity>
+                </>
+            )
+        }
+    ];
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.profileHeader}>
-                <Image
-                    source={{ uri: 'https://randomuser.me/api/portraits/men/1.jpg' }}
-                    style={styles.profileImage}
-                />
-                <View style={styles.profileInfo}>
-                    <Text style={styles.profileName}>John Doe</Text>
-                    <Text style={styles.profileStatus}>Hey there! I am using WhatsApp</Text>
+        <>
+            <StatusBar
+                barStyle={darkMode ? 'light-content' : 'dark-content'}
+                backgroundColor={darkMode ? '#075E54' : '#075E54'}
+            />
+            <SafeAreaView style={[
+                styles.safeArea,
+                darkMode && styles.darkSafeArea
+            ]}>
+                <View style={[
+                    styles.header,
+                    darkMode && styles.darkHeader
+                ]}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons
+                            name="arrow-back"
+                            size={24}
+                            color={darkMode ? '#fff' : 'white'}
+                        />
+                    </TouchableOpacity>
+                    <Text style={[
+                        styles.headerTitle,
+                        darkMode && styles.darkHeaderTitle
+                    ]}>
+                        Settings
+                    </Text>
+                    <View style={styles.headerRight} />
                 </View>
-            </View>
-            {settingsItems.map((item, index) => (
-                <TouchableOpacity key={index} style={styles.settingItem}>
-                    <View style={styles.itemIcon}>
-                        {item.icon}
-                    </View>
-                    <View style={styles.itemTextContainer}>
-                        <Text style={styles.itemTitle}>{item.title}</Text>
-                        {item.description ? (
-                            <Text style={styles.itemDescription}>{item.description}</Text>
-                        ) : null}
-                    </View>
-                    {item.rightComponent ? (
-                        <View style={styles.rightComponent}>
-                            {item.rightComponent}
-                        </View>
-                    ) : (
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    )}
-                </TouchableOpacity>
-            ))}
 
-            <Pressable style={{ justifyContent: "center", alignItems: "center", borderWidth: 2, width: 100 }} onPress={onLogout}>
-                <Text>Logout</Text>
-            </Pressable>
-            <View style={styles.footer}>
-                <Text style={styles.versionText}>WhatsApp Clone v2.22.10.72</Text>
-            </View>
-        </ScrollView>
+                <FlatList
+                    data={sections}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => item.renderItem()}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                />
+            </SafeAreaView>
+        </>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    loadingContainer: {
         flex: 1,
-        backgroundColor: '#f6f6f6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#ffffff'
     },
-    profileHeader: {
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+    },
+    darkSafeArea: {
+        backgroundColor: '#1a1a1a',
+    },
+    listContainer: {
+        padding: 20,
+        paddingBottom: 40,
+    },
+    profileSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 15,
-        backgroundColor: 'white',
-        marginBottom: 10,
+        marginBottom: 30,
     },
-    profileImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+    avatar: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
         marginRight: 15,
+    },
+    avatarPlaceholder: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#4a90e2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    darkAvatarPlaceholder: {
+        backgroundColor: '#6366f1',
+    },
+    avatarText: {
+        color: 'white',
+        fontSize: 24,
+        fontWeight: 'bold',
     },
     profileInfo: {
         flex: 1,
     },
-    profileName: {
-        fontSize: 18,
+    name: {
+        fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 3,
+        marginBottom: 5,
+        color: '#000',
     },
-    profileStatus: {
+    darkText: {
+        color: '#fff',
+    },
+    email: {
         fontSize: 14,
-        color: '#777',
+        color: '#666',
+    },
+    darkSecondaryText: {
+        color: '#aaa',
+    },
+    section: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        marginBottom: 20,
+        paddingHorizontal: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    darkSection: {
+        backgroundColor: '#1e1e1e',
+        shadowColor: '#000',
+        shadowOpacity: 0.3,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#555',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    darkSectionTitle: {
+        color: '#aaa',
+        borderBottomColor: '#333',
     },
     settingItem: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
         paddingVertical: 15,
-        paddingHorizontal: 20,
-        backgroundColor: 'white',
-        borderBottomWidth: 0.5,
-        borderBottomColor: '#f0f0f0',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
-    itemIcon: {
-        marginRight: 20,
+    darkSettingItem: {
+        borderBottomColor: '#333',
     },
-    itemTextContainer: {
-        flex: 1,
-    },
-    itemTitle: {
+    settingText: {
         fontSize: 16,
-        marginBottom: 3,
+        color: '#000',
     },
-    itemDescription: {
-        fontSize: 13,
-        color: '#777',
-    },
-    rightComponent: {
-        marginLeft: 10,
-    },
-    footer: {
-        padding: 20,
-        alignItems: 'center',
-    },
-    versionText: {
-        fontSize: 12,
+    arrow: {
+        fontSize: 20,
         color: '#999',
+    },
+    signOutButton: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 15,
+        alignItems: 'center',
+        marginTop: 10,
+        borderWidth: 1,
+        borderColor: '#ff3b30',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    darkSignOutButton: {
+        backgroundColor: '#1e1e1e',
+        borderColor: '#ff6b6b',
+    },
+    signOutText: {
+        color: '#ff3b30',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    deleteAccountButton: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 15,
+        alignItems: 'center',
+        marginTop: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    darkDeleteAccountButton: {
+        backgroundColor: '#1e1e1e',
+    },
+    deleteAccountText: {
+        color: '#666',
+        fontSize: 16,
+    },
+    darkDeleteAccountText: {
+        color: '#999',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        backgroundColor: '#075E54',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+    },
+    darkHeader: {
+        backgroundColor: '#1a1a1a',
+        borderBottomColor: '#333',
+    },
+    backButton: {
+        padding: 8,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: 'white',
+    },
+    darkHeaderTitle: {
+        color: '#fff',
+    },
+    headerRight: {
+        width: 40,
     },
 });
 

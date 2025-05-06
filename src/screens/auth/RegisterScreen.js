@@ -8,7 +8,7 @@ import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { useAuthStore } from '../../store/auth.store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,11 +18,12 @@ const RegisterScreen = ({ navigation }) => {
     const phoneInput = useRef(null);    
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const { signUp, loading, error, setError } = useAuthStore();
 
     const handleChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+        if (error) setError(null); 
     };
 
     const validate = () => {
@@ -51,31 +52,43 @@ const RegisterScreen = ({ navigation }) => {
 
     const handleRegister = async () => {
         if (!validate()) return;
-
-        setLoading(true);
-
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email: form.email,
-                password: form.password,
-                options: {
-                    data: {
-                        full_name: form.fullName,
-                        phone: phoneNumber,
-                    },
+            const response = await signUp(
+                form.email,
+                form.password,
+                {
+                    full_name: form.fullName,
+                    phone: phoneNumber
                 }
-            });
-            console.log("data====>", data);
-            if (error) {
-                Alert.alert("Signup Error", error.message);
-            } else {
-                Alert.alert("Verify Email", "A confirmation email has been sent. Please check your inbox.");
+            );
+            console.log('Registration response:', JSON.stringify(response, null, 2));
+
+            if (response?.user?.identities?.length === 0) {
+                console.warn('User might already exist:', response);
+                Alert.alert(
+                    "Email Exists",
+                    "This email is already registered. Please login instead."
+                );
                 navigation.navigate(AUTH_ROUTES.LOGIN);
+                return;
             }
+
+            Alert.alert(
+                "Verify Email",
+                "A confirmation email has been sent. Please check your inbox."
+            );
+            navigation.navigate(AUTH_ROUTES.LOGIN);
         } catch (err) {
-            Alert.alert("Unexpected Error", err.message);
-        } finally {
-            setLoading(false);
+            console.error('Registration error:', {
+                error: err,
+                message: err.message,
+                stack: err.stack,
+                formData: form
+            });
+            Alert.alert(
+                "Registration Error",
+                err.message || "An unexpected error occurred"
+            );
         }
     };
 

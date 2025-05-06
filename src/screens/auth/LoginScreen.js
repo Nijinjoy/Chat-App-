@@ -7,21 +7,26 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { email } from '../../assets/images';
 import { login } from '../../services/authService';
+import { useAuthStore } from '../../store/auth.store';
+import { AUTH_ROUTES } from '../../navigation/AuthStack';
+import { useNavigation } from '@react-navigation/native';
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = () => {
+    const navigation = useNavigation()
     const [form, setForm] = useState({ email: '', password: '' });
     const [errors, setErrors] = useState({
         email: '',
         password: ''
     });
     const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const { signIn, loading, error, setError } = useAuthStore();
 
     const handleChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
+        if (error) setError(null); // Clear previous auth errors
     }
 
     const handleLogin = async () => {
@@ -31,33 +36,38 @@ const LoginScreen = ({ navigation }) => {
         if (!form.email) {
             newErrors.email = 'Email is required';
             hasError = true;
+        } else if (!form.email.includes('@')) {
+            newErrors.email = 'Please enter a valid email';
+            hasError = true;
         }
         if (!form.password) {
             newErrors.password = 'Password is required';
             hasError = true;
+        } else if (form.password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+            hasError = true;
         }
-
         if (hasError) {
             setErrors(newErrors);
             return;
         }
-
-        setLoading(true);
         try {
-            const { data, error } = await login({
-                email: form.email,
-                password: form.password,
+            const response = await signIn(form.email, form.password);
+            console.log('Login successful:', {
+                user: response.user,
+                session: response.session
             });
-            console.log('Login Data Response:', data);
-            if (error) {
-                Alert.alert('Login Failed', error.message);
-            } else {
-                navigation.navigate('Home');
-            }
+            navigation.navigate('App');
         } catch (err) {
-            Alert.alert('Error', err.message);
-        } finally {
-            setLoading(false);
+            console.error('Login error:', {
+                error: err,
+                message: err.message,
+                formData: form
+            });
+            Alert.alert(
+                'Login Failed',
+                err.message || 'Invalid email or password'
+            );
         }
     };
 
@@ -111,7 +121,7 @@ const LoginScreen = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity onPress={() => navigation.navigate("RegisterScreen")}>
+                <TouchableOpacity onPress={() => navigation.navigate(AUTH_ROUTES.REGISTER)}>
                     <Text style={styles.loginText}>
                         Don't have an account? <Text style={styles.loginLink}>Sign up</Text>
                     </Text>

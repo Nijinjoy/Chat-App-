@@ -4,13 +4,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import ChatListScreen from '../screens/main/ChatListScreen';
 import ChatScreen from '../screens/main/ChatScreen';
-import ProfileScreen from '../screens/main/ProfileScreen';
 import SettingsScreen from '../screens/main/SettingScreen';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import ContactScreen from '../screens/main/ContactScreen';
 
 export const APP_ROUTES = {
     CHATS: 'Chats',
-    PROFILE: 'Profile',
+    CONTACTS: 'Contacts',
     SETTINGS: 'Settings',
     CHAT_DETAIL: 'ChatDetail',
 };
@@ -44,12 +44,13 @@ const Tab = createBottomTabNavigator();
 const TabBarIcon = ({ routeName, focused, color, size }) => {
     const iconMap = {
         [APP_ROUTES.CHATS]: focused ? 'chatbubbles' : 'chatbubbles-outline',
-        [APP_ROUTES.PROFILE]: focused ? 'person' : 'person-outline',
+        [APP_ROUTES.CONTACTS]: focused ? 'people' : 'people-outline',
         [APP_ROUTES.SETTINGS]: focused ? 'settings' : 'settings-outline',
     };
 
     return <Ionicons name={iconMap[routeName]} size={size} color={color} />;
 };
+
 
 export default function AppStack() {
     return (
@@ -87,10 +88,7 @@ export default function AppStack() {
                 name={APP_ROUTES.CHATS}
                 component={ChatStackScreen}
                 options={({ route }) => {
-                    // Get the current nested route name
                     const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatList';
-
-                    // Hide tab bar if not on ChatList
                     const isChatList = routeName === 'ChatList';
 
                     return {
@@ -112,8 +110,8 @@ export default function AppStack() {
             />
 
             <Tab.Screen
-                name={APP_ROUTES.PROFILE}
-                component={ProfileScreen}
+                name={APP_ROUTES.CONTACTS}
+                component={ContactScreen}
                 options={{ title: 'Profile' }}
             />
             <Tab.Screen

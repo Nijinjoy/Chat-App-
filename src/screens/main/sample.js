@@ -1,219 +1,497 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, Dimensions } from 'react-native';
-import PhoneInput from 'react-native-phone-number-input';
-import { Ionicons } from '@expo/vector-icons';
-import { email } from '../../assets/images';
-import { signUp } from '../../services/authService';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Switch,
+    TouchableOpacity,
+    Image,
+    SafeAreaView,
+    StatusBar,
+    Platform,
+    FlatList
+} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
-import { AUTH_ROUTES } from '../../navigation/AuthStack';
-import LottieView from 'lottie-react-native';
-import { register } from '../../assets/animations';
+import { Ionicons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
+const SettingScreen = () => {
+    const navigation = useNavigation();
+    const [user, setUser] = useState(null);
+    const [darkMode, setDarkMode] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [loading, setLoading] = useState(true);
 
-const RegisterScreen = ({ navigation }) => {
-    const [form, setForm] = useState({ fullName: '', email: '', password: '', phone: '' });
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const phoneInput = useRef(null);
-    const [errors, setErrors] = useState({});
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-
-    const { width } = Dimensions.get('window');
-
-    const handleChange = (name, value) => {
-        setForm(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
-    };
-
-    const validate = () => {
-        let valid = true;
-        const newErrors = {};
-
-        if (!form.fullName.trim()) {
-            newErrors.fullName = "Full name is required";
-            valid = false;
-        }
-        if (!form.email.includes("@")) {
-            newErrors.email = "Enter a valid email";
-            valid = false;
-        }
-        if (form.password.length < 3) {
-            newErrors.password = "Password must be at least 3 characters";
-            valid = false;
-        }
-        if (!phoneNumber || phoneNumber.length < 6) {
-            newErrors.phone = "Enter a valid phone number";
-            valid = false;
-        }
-        setErrors(newErrors);
-        return valid;
-    }
-
-    const handleRegister = async () => {
-        if (!validate()) return;
-
-        setLoading(true);
-
-        try {
-            const { data, error } = await supabase.auth.signUp({
-                email: form.email,
-                password: form.password,
-                options: {
-                    data: {
-                        full_name: form.fullName,
-                        phone: phoneNumber,
-                    },
-                }
-            });
-            console.log("data====>", data);
-            if (error) {
-                Alert.alert("Signup Error", error.message);
-            } else {
-                Alert.alert("Verify Email", "A confirmation email has been sent. Please check your inbox.");
-                navigation.navigate(AUTH_ROUTES.LOGIN);
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                setUser(user);
+            } catch (error) {
+                console.error('Error fetching user:', error);
+            } finally {
+                setLoading(false);
             }
-        } catch (err) {
-            Alert.alert("Unexpected Error", err.message);
-        } finally {
-            setLoading(false);
+        };
+
+        fetchUser();
+    }, []);
+
+    const handleSignOut = async () => {
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+            navigation.navigate('Login');
+        } catch (error) {
+            console.error('Error signing out:', error.message);
         }
     };
 
-    const fields = [
-        { name: 'fullName', label: 'Full Name', placeholder: 'Enter your full name', secure: false, icon: 'person-outline' },
-        { name: 'email', label: 'Email', placeholder: 'Enter your email', secure: false, icon: 'mail-outline' },
-        { name: 'password', label: 'Password', placeholder: 'Enter your password', secure: true, icon: 'lock-closed-outline' },
+    const handleDeleteAccount = async () => {
+        // Implementation for delete account
+    };
+
+    // Data for FlatList sections
+    const sections = [
+        {
+            id: 'profile',
+            renderItem: () => (
+                <View style={styles.profileSection}>
+                    {user?.user_metadata?.avatar_url ? (
+                        <Image
+                            source={{ uri: user.user_metadata.avatar_url }}
+                            style={styles.avatar}
+                        />
+                    ) : (
+                        <View style={[
+                            styles.avatarPlaceholder,
+                            darkMode && styles.darkAvatarPlaceholder
+                        ]}>
+                            <Text style={styles.avatarText}>
+                                {user?.email?.charAt(0).toUpperCase() || 'U'}
+                            </Text>
+                        </View>
+                    )}
+                    <View style={styles.profileInfo}>
+                        <Text style={[
+                            styles.name,
+                            darkMode && styles.darkText
+                        ]}>
+                            {user?.user_metadata?.full_name || 'User'}
+                        </Text>
+                        <Text style={[
+                            styles.email,
+                            darkMode && styles.darkSecondaryText
+                        ]}>
+                            {user?.email}
+                        </Text>
+                    </View>
+                </View>
+            )
+        },
+        {
+            id: 'preferences',
+            title: 'Preferences',
+            renderItem: () => (
+                <View style={[
+                    styles.section,
+                    darkMode && styles.darkSection
+                ]}>
+                    <Text style={[
+                        styles.sectionTitle,
+                        darkMode && styles.darkSectionTitle
+                    ]}>
+                        Preferences
+                    </Text>
+                    <View style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Dark Mode
+                        </Text>
+                        <Switch
+                            value={darkMode}
+                            onValueChange={setDarkMode}
+                            trackColor={{ false: '#767577', true: '#81b0ff' }}
+                            thumbColor={darkMode ? '#f5dd4b' : '#f4f3f4'}
+                        />
+                    </View>
+                    <View style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Notifications
+                        </Text>
+                        <Switch
+                            value={notificationsEnabled}
+                            onValueChange={setNotificationsEnabled}
+                            trackColor={{ false: '#767577', true: '#81b0ff' }}
+                            thumbColor={notificationsEnabled ? '#f5dd4b' : '#f4f3f4'}
+                        />
+                    </View>
+                </View>
+            )
+        },
+        {
+            id: 'account',
+            title: 'Account',
+            renderItem: () => (
+                <View style={[
+                    styles.section,
+                    darkMode && styles.darkSection
+                ]}>
+                    <Text style={[
+                        styles.sectionTitle,
+                        darkMode && styles.darkSectionTitle
+                    ]}>
+                        Account
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.settingItem}
+                        onPress={() => navigation.navigate('EditProfile')}
+                    >
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Edit Profile
+                        </Text>
+                        <Text style={styles.arrow}>›</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.settingItem}
+                        onPress={() => navigation.navigate('ChangePassword')}
+                    >
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Change Password
+                        </Text>
+                        <Text style={styles.arrow}>›</Text>
+                    </TouchableOpacity>
+                </View>
+            )
+        },
+        {
+            id: 'support',
+            title: 'Support',
+            renderItem: () => (
+                <View style={[
+                    styles.section,
+                    darkMode && styles.darkSection
+                ]}>
+                    <Text style={[
+                        styles.sectionTitle,
+                        darkMode && styles.darkSectionTitle
+                    ]}>
+                        Support
+                    </Text>
+                    <TouchableOpacity style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Help Center
+                        </Text>
+                        <Text style={styles.arrow}>›</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            Contact Us
+                        </Text>
+                        <Text style={styles.arrow}>›</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.settingItem}>
+                        <Text style={[
+                            styles.settingText,
+                            darkMode && styles.darkText
+                        ]}>
+                            About
+                        </Text>
+                        <Text style={styles.arrow}>›</Text>
+                    </TouchableOpacity>
+                </View>
+            )
+        },
+        {
+            id: 'actions',
+            renderItem: () => (
+                <>
+                    <TouchableOpacity
+                        style={[
+                            styles.signOutButton,
+                            darkMode && styles.darkSignOutButton
+                        ]}
+                        onPress={handleSignOut}
+                    >
+                        <Text style={styles.signOutText}>Sign Out</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.deleteAccountButton,
+                            darkMode && styles.darkDeleteAccountButton
+                        ]}
+                        onPress={handleDeleteAccount}
+                    >
+                        <Text style={[
+                            styles.deleteAccountText,
+                            darkMode && styles.darkDeleteAccountText
+                        ]}>
+                            Delete Account
+                        </Text>
+                    </TouchableOpacity>
+                </>
+            )
+        }
     ];
 
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.loadingContainer}>
+                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+                <Text>Loading...</Text>
+            </SafeAreaView>
+        );
+    }
+
     return (
-        <View style={styles.container}>
-            <LottieView
-                source={register}
-                autoPlay
-                loop={false}
-                style={styles.animation}
-                resizeMode="contain"
+        <>
+            <StatusBar
+                barStyle={darkMode ? 'light-content' : 'dark-content'}
+                backgroundColor={darkMode ? '#075E54' : '#075E54'}
             />
-            <View style={styles.inputWrapper}>
-                <PhoneInput
-                    ref={phoneInput}
-                    defaultValue={phoneNumber}
-                    defaultCode="IN"
-                    layout="first"
-                    onChangeFormattedText={(text) => {
-                        setPhoneNumber(text);
-                        handleChange('phone', text);
-                    }}
-                    containerStyle={styles.phoneContainer}
-                    textContainerStyle={styles.phoneTextContainer}
-                />
-                {errors.phone && <Text style={styles.error}>{errors.phone}</Text>}
-            </View>
-            {fields.map((field) => (
-                <View key={field.name} style={styles.inputWrapper}>
-                    <View style={styles.inputContainer}>
-                        <Ionicons name={field.icon} size={20} color="#666" style={styles.icon} />
-                        <TextInput
-                            style={styles.input}
-                            placeholder={field.placeholder}
-                            placeholderTextColor="#999"
-                            secureTextEntry={field.secure && !showPassword}
-                            value={form[field.name]}
-                            onChangeText={(value) => handleChange(field.name, value)}
+            <SafeAreaView style={[
+                styles.safeArea,
+                darkMode && styles.darkSafeArea
+            ]}>
+                <View style={[
+                    styles.header,
+                    darkMode && styles.darkHeader
+                ]}>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons
+                            name="arrow-back"
+                            size={24}
+                            color={darkMode ? '#fff' : '#000'}
                         />
-                        {field.secure && (
-                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={22} color="#666" />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                    {errors[field.name] && <Text style={styles.error}>{errors[field.name]}</Text>}
+                    </TouchableOpacity>
+                    <Text style={[
+                        styles.headerTitle,
+                        darkMode && styles.darkHeaderTitle
+                    ]}>
+                        Settings
+                    </Text>
+                    <View style={styles.headerRight} />
                 </View>
-            ))}
 
-            <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Register</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => navigation.navigate("LoginScreen")}>
-                <Text style={styles.loginText}>Already have an account? <Text style={styles.loginLink}>Login</Text></Text>
-            </TouchableOpacity>
-        </View>
+                <FlatList
+                    data={sections}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => item.renderItem()}
+                    contentContainerStyle={styles.listContainer}
+                    showsVerticalScrollIndicator={false}
+                />
+            </SafeAreaView>
+        </>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    loadingContainer: {
         flex: 1,
         justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#ffffff'
+    },
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+    },
+    darkSafeArea: {
+        backgroundColor: '#1a1a1a',
+    },
+    listContainer: {
         padding: 20,
+        paddingBottom: 40,
     },
-    image: {
-        width: 150,
-        height: 150,
-        alignSelf: 'center',
-        marginBottom: 30,
-    },
-    animation: {
-        width: width * 0.7,
-        height: width * 0.7,
-    },
-    inputWrapper: {
-        marginTop: 15,
-        width: '100%',
-    },
-    inputContainer: {
+    profileSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 15,
+        marginBottom: 30,
     },
-    input: {
-        flex: 1,
-        color: '#333',
+    avatar: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        marginRight: 15,
     },
-    icon: {
-        marginRight: 10,
-    },
-    button: {
-        backgroundColor: '#4A80F0',
-        padding: 15,
-        borderRadius: 8,
+    avatarPlaceholder: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#4a90e2',
+        justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        marginRight: 15,
     },
-    buttonText: {
-        color: '#fff',
-        fontWeight: 'bold',
+    darkAvatarPlaceholder: {
+        backgroundColor: '#6366f1',
     },
-    loginText: {
+    avatarText: {
         color: 'white',
-        textAlign: 'center',
-        marginTop: 15,
-    },
-    loginLink: {
-        color: '#4A80F0',
+        fontSize: 24,
         fontWeight: 'bold',
     },
-    error: {
-        color: '#ff6b6b',
-        fontSize: 12,
+    profileInfo: {
+        flex: 1,
+    },
+    name: {
+        fontSize: 20,
+        fontWeight: 'bold',
         marginBottom: 5,
+        color: '#000',
     },
-    phoneContainer: {
-        width: '100%',
-        height: 50,
-        borderColor: '#ccc',
+    darkText: {
+        color: '#fff',
+    },
+    email: {
+        fontSize: 14,
+        color: '#666',
+    },
+    darkSecondaryText: {
+        color: '#aaa',
+    },
+    section: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        marginBottom: 20,
+        paddingHorizontal: 15,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    darkSection: {
+        backgroundColor: '#1e1e1e',
+        shadowColor: '#000',
+        shadowOpacity: 0.3,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#555',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    darkSectionTitle: {
+        color: '#aaa',
+        borderBottomColor: '#333',
+    },
+    settingItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    darkSettingItem: {
+        borderBottomColor: '#333',
+    },
+    settingText: {
+        fontSize: 16,
+        color: '#000',
+    },
+    arrow: {
+        fontSize: 20,
+        color: '#999',
+    },
+    signOutButton: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 15,
+        alignItems: 'center',
+        marginTop: 10,
         borderWidth: 1,
-        borderRadius: 5,
+        borderColor: '#ff3b30',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
-    phoneTextContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 5,
-        paddingVertical: 10,
+    darkSignOutButton: {
+        backgroundColor: '#1e1e1e',
+        borderColor: '#ff6b6b',
+    },
+    signOutText: {
+        color: '#ff3b30',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    deleteAccountButton: {
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        padding: 15,
+        alignItems: 'center',
+        marginTop: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    darkDeleteAccountButton: {
+        backgroundColor: '#1e1e1e',
+    },
+    deleteAccountText: {
+        color: '#666',
+        fontSize: 16,
+    },
+    darkDeleteAccountText: {
+        color: '#999',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        backgroundColor: '#075E54',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0
+    },
+    darkHeader: {
+        backgroundColor: '#1a1a1a',
+        borderBottomColor: '#333',
+    },
+    backButton: {
+        padding: 8,
+    },
+    headerTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+    },
+    darkHeaderTitle: {
+        color: '#fff',
+    },
+    headerRight: {
+        width: 40,
     },
 });
 
-export default RegisterScreen;
+export default SettingScreen;

@@ -4,6 +4,7 @@ import LottieView from 'lottie-react-native';
 import { logo } from '../../assets/images';
 import { chatAnimation, loadingDots } from '../../assets/animations';
 import { AUTH_ROUTES } from '../../navigation/AuthStack';
+import { useAuthStore } from '../../store/auth.store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -12,13 +13,59 @@ const SplashScreen = ({ navigation }) => {
     const logoScale = new Animated.Value(0.5);
     const textSlide = new Animated.Value(height * 0.1);
     const bgColor = new Animated.Value(0);
+    const { user } = useAuthStore()
+
 
     const backgroundColor = bgColor.interpolate({
         inputRange: [0, 1],
         outputRange: ['#ffffff', '#f8f9fa']
     });
 
+    // useEffect(() => {
+    //     Animated.sequence([
+    //         Animated.timing(fadeAnim, {
+    //             toValue: 1,
+    //             duration: 600,
+    //             useNativeDriver: true,
+    //         }),
+    //         Animated.parallel([
+    //             Animated.spring(logoScale, {
+    //                 toValue: 1,
+    //                 friction: 5,
+    //                 tension: 40,
+    //                 useNativeDriver: true,
+    //             }),
+    //         Animated.timing(textSlide, {
+    //             toValue: 0,
+    //             duration: 800,
+    //             easing: Easing.out(Easing.exp),
+    //             useNativeDriver: true,
+    //         }),
+    //             Animated.timing(bgColor, {
+    //                 toValue: 1,
+    //                 duration: 1500,
+    //                 useNativeDriver: false,
+    //             }),
+    //         ]),
+    //     ]).start();
+    //     const timer = setTimeout(() => {
+    //         navigation.replace('Auth');
+    //     }, 3000);
+
+    //     return () => clearTimeout(timer);
+    // }, []);
+
     useEffect(() => {
+        // console.log('User response:', user)
+        const timer = setTimeout(() => {
+            if (user) {
+                navigation.replace('App');
+            } else {
+                navigation.replace('Auth');
+            }
+        }, 3000);
+
+        // Start the animations
         Animated.sequence([
             Animated.timing(fadeAnim, {
                 toValue: 1,
@@ -32,12 +79,12 @@ const SplashScreen = ({ navigation }) => {
                     tension: 40,
                     useNativeDriver: true,
                 }),
-            Animated.timing(textSlide, {
-                toValue: 0,
-                duration: 800,
-                easing: Easing.out(Easing.exp),
-                useNativeDriver: true,
-            }),
+                Animated.timing(textSlide, {
+                    toValue: 0,
+                    duration: 800,
+                    easing: Easing.out(Easing.exp),
+                    useNativeDriver: true,
+                }),
                 Animated.timing(bgColor, {
                     toValue: 1,
                     duration: 1500,
@@ -46,13 +93,10 @@ const SplashScreen = ({ navigation }) => {
             ]),
         ]).start();
 
-        // Navigate to Welcome screen after animation completes
-        const timer = setTimeout(() => {
-            navigation.replace('Auth');
-        }, 3000);
+        return () => clearTimeout(timer); // Cleanup the timer on unmount
+    }, [user, navigation]); // Add `user` and `navigation` as dependencies
 
-        return () => clearTimeout(timer);
-    }, []);
+
 
     return (
         <Animated.View style={[styles.container, { backgroundColor }]}>
@@ -97,13 +141,11 @@ const styles = StyleSheet.create({
     },
     textContainer: {
         alignItems: 'center',
-    // marginTop: 20,
     },
     title: {
         fontSize: 32,
         fontWeight: '800',
         color: '#2d3436',
-        // marginBottom: 8,
         fontFamily: 'System', 
     },
     subtitle: {
@@ -121,7 +163,6 @@ const styles = StyleSheet.create({
         height: 40,
     },
     loadingText: {
-        // marginTop: 8,
         fontSize: 14,
         color: '#b2bec3',
         fontWeight: '500',

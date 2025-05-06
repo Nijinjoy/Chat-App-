@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -9,41 +9,32 @@ import {
     Animated,
     StyleSheet,
     StatusBar,
-    Platform
+    Platform,
+    RefreshControl,
+    ActivityIndicator
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { supabase } from '../../services/supabase';
 import ChatItem from '../../components/ChatItem';
-import {
-    collection,
-    addDoc,
-    serverTimestamp,
-    setDoc,
-    doc,
-    query,
-    where,
-    getDocs
-} from 'firebase/firestore';
-import { db } from '../../firebase/config';
-import { getAuth } from 'firebase/auth';
+import { useNavigation } from '@react-navigation/native';
+import { APP_ROUTES } from '../../navigation/AppStack';
+
 
 const ChatListScreen = () => {
+    const navigation = useNavigation()
     const [searchMode, setSearchMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedChats, setSelectedChats] = useState([]);
     const [headerTitle, setHeaderTitle] = useState('WhatsApp');
     const scrollY = useRef(new Animated.Value(0)).current;
 
-    const [chats, setChats] = useState([
-        {
-            id: '1',
-            name: 'John Doe',
-            lastMessage: 'Hey, how are you doing?',
-            time: '10:30 AM',
-            unread: 2,
-            avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-            isOnline: true
-        },
-    ]);
+    const toggleSearch = () => {
+        setSearchMode(!searchMode);
+        if (!searchMode) {
+            setSearchQuery('');
+            setSelectedChats([]);
+        }
+    };
 
     const headerHeight = scrollY.interpolate({
         inputRange: [0, 50],
@@ -57,30 +48,9 @@ const ChatListScreen = () => {
         extrapolate: 'clamp',
     });
 
-    const toggleSearch = () => {
-        setSearchMode(!searchMode);
-        if (!searchMode) {
-            setSearchQuery('');
-            setSelectedChats([]);
-        }
-    };
-
-    const toggleChatSelection = (chatId) => {
-        setSelectedChats(prev =>
-            prev.includes(chatId)
-                ? prev.filter(id => id !== chatId)
-                : [...prev, chatId]
-    );
-    };
-
     const exitSelectionMode = () => {
         setSelectedChats([]);
     };
-
-    const createTestChats = async () => {
-
-    };
-
 
     return (
         <SafeAreaView style={styles.container}>
@@ -150,7 +120,7 @@ const ChatListScreen = () => {
                                 <Ionicons name="search" size={20} color="white" />
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.headerButton} onPress={createTestChats}>
+                                    <TouchableOpacity style={styles.headerButton} >
                                 <Feather name="more-vertical" size={20} color="white" />
                             </TouchableOpacity>
                         </View>
@@ -158,25 +128,7 @@ const ChatListScreen = () => {
                 )}
             </Animated.View>
 
-            {/* Chat List */}
-            <FlatList
-                data={chats}
-                renderItem={({ item }) => (
-                    <ChatItem
-                        chat={item}
-                        isSelected={selectedChats.includes(item.id)}
-                        onSelect={toggleChatSelection}
-                    />
-                )}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.chatList}
-                onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: false }
-                )}
-                scrollEventThrottle={16}
-            />
-            <TouchableOpacity style={styles.fab} onPress={createTestChats}>
+            <TouchableOpacity style={styles.fab}  >
                 <Ionicons name="chatbubble" size={24} color="white" />
             </TouchableOpacity>
         </SafeAreaView>
