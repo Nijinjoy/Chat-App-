@@ -1,12 +1,12 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-const chatService = () => {
+const helpers = () => {
     return (
         <View>
-            <Text>chatService</Text>
+            <Text>helpers</Text>
         </View>
     )
 }
 
-export default chatService
+export default helpers

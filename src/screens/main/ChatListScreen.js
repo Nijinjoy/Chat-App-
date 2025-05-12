@@ -14,11 +14,10 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
-import { supabase } from '../../services/supabase';
-import ChatItem from '../../components/ChatItem';
 import { useNavigation } from '@react-navigation/native';
 import { APP_ROUTES } from '../../navigation/AppStack';
-
+import { supabase } from '../../services/supabase';
+import ChatItem from '../../components/ChatItem';
 
 const ChatListScreen = () => {
     const navigation = useNavigation()
@@ -27,6 +26,55 @@ const ChatListScreen = () => {
     const [selectedChats, setSelectedChats] = useState([]);
     const [headerTitle, setHeaderTitle] = useState('WhatsApp');
     const scrollY = useRef(new Animated.Value(0)).current;
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
+
+    const fetchUsers = async () => {
+        try {
+            setLoading(true);
+
+            // Get logged-in user ID
+            const {
+                data: { user },
+                error: userError
+            } = await supabase.auth.getUser();
+
+            if (userError) {
+                console.error('Failed to get logged in user:', userError.message);
+                return;
+            }
+
+            setCurrentUserId(user.id);
+
+            // Fetch all users
+            const { data, error } = await supabase
+                .from('users')
+                .select('id, email, full_name, created_at')
+                .order('full_name', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching users:', error.message);
+                return;
+            }
+
+            // Exclude current user
+            const filteredUsers = data.filter((u) => u.id !== user.id);
+
+            setUsers(filteredUsers);
+        } catch (err) {
+            console.error('Unexpected error:', err.message);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);      
 
     const toggleSearch = () => {
         setSearchMode(!searchMode);
@@ -50,6 +98,22 @@ const ChatListScreen = () => {
 
     const exitSelectionMode = () => {
         setSelectedChats([]);
+    };
+
+    const handleChatPress = (user: User) => {
+        if (selectedChats.length > 0) {
+            setSelectedChats(prev =>
+                prev.includes(user.id)
+                    ? prev.filter(id => id !== user.id)
+                    : [...prev, user.id]
+            );
+        } else {
+            navigation.navigate(APP_ROUTES.CHAT_DETAIL, {
+                chatId: user.id,
+                chatName: user.full_name,  // This will be the username
+                avatar: user.avatar || 'default-avatar-url'
+            });
+        }
     };
 
     return (
@@ -127,6 +191,45 @@ const ChatListScreen = () => {
                     </View>
                 )}
             </Animated.View>
+            <FlatList
+                data={users}
+                keyExtractor={(item) => item.id}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={fetchUsers} />
+                }
+                renderItem={({ item }) => {
+                    const formattedTime = item.created_at
+                        ? new Date(item.created_at).toLocaleString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                        })
+                        : 'Just now';
+
+                    return (
+                        <ChatItem
+                            chat={{
+                                avatar: item.avatar || 'default-avatar-url',
+                                name: item.full_name,
+                                lastMessage: item.last_message || 'No message yet',
+                                time: formattedTime,
+                                unreadCount: item.unread_count || 0,
+                            }}
+                            onPress={() => handleChatPress(item)}
+                        />
+                    );
+                }}
+                ListEmptyComponent={
+                    loading ? (
+                        <ActivityIndicator size="large" color="#075E54" />
+                    ) : (
+                        <Text style={{ textAlign: 'center', marginTop: 20 }}>No users found</Text>
+                    )
+                }
+            />
 
             <TouchableOpacity style={styles.fab}  >
                 <Ionicons name="chatbubble" size={24} color="white" />
@@ -214,6 +317,20 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 3,
     },
+    userItem: {
+        padding: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    userName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    userEmail: {
+        fontSize: 14,
+        color: 'gray',
+    },
+
 });
 
 export default ChatListScreen;

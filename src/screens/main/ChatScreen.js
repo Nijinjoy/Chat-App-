@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import {
     View,
     StyleSheet,
@@ -16,27 +16,14 @@ import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from '@expo/vector-icons'
 import HeaderComponent from "../../components/HeaderComponent";
+import { supabase } from "../../services/supabase";
 
 const ChatScreen = () => {
     const navigation = useNavigation()
     const route = useRoute();
     const { chatId, chatName, avatar } = route.params;
     const [messageText, setMessageText] = useState("");
-    const [messages, setMessages] = useState([
-        {
-            id: "1",
-            text: "Hi there!",
-            type: "received",
-            timestamp: "10:00 AM",
-        },
-        {
-            id: "2",
-            text: "Hello!",
-            type: "sent",
-            timestamp: "10:01 AM",
-        },
-    ]);
-
+    const [messages, setMessages] = useState([]);
     const flatListRef = useRef();
 
     const getCurrentTime = () => {
@@ -47,25 +34,68 @@ const ChatScreen = () => {
         return `${hours % 12 || 12}:${minutes.toString().padStart(2, "0")} ${ampm}`;
     };
 
-    const sendMessage = useCallback(() => {
-        if (messageText.trim() !== "") {
-            const timestamp = getCurrentTime();
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: `${prev.length + 1}`,
-                    text: messageText,
-                    type: "sent",
-                    timestamp,
-                },
-            ]);
-            setMessageText("");
+    useEffect(() => {
+        const fetchMessages = async () => {
+            const { data, error } = await supabase
+                .from("messages")
+                .select("*")
+                .eq("chat_id", chatId)
+            // .order("timestamp", { ascending: true });
 
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
+            if (error) {
+                console.error("Failed to fetch messages:", error.message);
+            } else {
+                setMessages(data);
+            }
+        };
+
+        fetchMessages();
+    }, [chatId]);
+
+    const sendMessage = useCallback(async () => {
+        if (messageText.trim() === "") return;
+
+        // const timestamp = getCurrentTime();
+
+        // Get current user
+        const {
+            data: { user },
+            error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+            console.error("User not found:", userError?.message);
+            return;
         }
+
+        const newMessage = {
+            chat_id: chatId,
+            sender_id: user.id,
+            text: messageText,
+            // timestamp,
+            // type: "sent",
+        };
+
+        // Update UI immediately
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: `${prev.length + 1}`,
+                ...newMessage,
+            },
+        ]);
+        setMessageText("");
+
+        const { error } = await supabase.from("messages").insert([newMessage]);
+        if (error) {
+            console.error("Error saving message:", error.message);
+        }
+
+        setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
     }, [messageText]);
+
 
     const renderMessage = ({ item }) => (
         <View
@@ -85,6 +115,7 @@ const ChatScreen = () => {
             </View>
         </View>
     );
+
 
     return (
         <SafeAreaView style={styles.container}>

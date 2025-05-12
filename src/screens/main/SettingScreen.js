@@ -15,36 +15,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthStore } from '../../store/auth.store';
 import { useTheme } from '../../contexts/ThemeContext';
 import { registerForPushNotificationsAsync } from '../../utils/notificationService';
 import { AUTH_ROUTES } from '../../navigation/AuthStack';
 
 const SettingScreen = () => {
     const navigation = useNavigation();
-    const { user, signOut } = useAuthStore(state => state);
     const [darkMode, setDarkMode] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-
-    console.log("setuser===>", user);
-
-    const updatePushToken = async (enabled) => {
-        if (enabled) {
-            const token = await registerForPushNotificationsAsync();
-            if (token) {
-                await supabase
-                    .from('users')
-                    .update({ expo_push_token: token })
-                    .eq('id', user.id);
-            }
-        } else {
-            // Optionally remove or clear the token
-            await supabase
-                .from('users')
-                .update({ expo_push_token: null })
-                .eq('id', user.id);
-        }
-    };
 
     const handleNotificationToggle = async (value) => {
         setNotificationsEnabled(value);
@@ -94,7 +72,7 @@ const SettingScreen = () => {
             id: 'profile',
             renderItem: () => (
                 <View style={styles.profileSection}>
-                    {user?.user_metadata?.avatar_url ? (
+                    {/* {user?.user_metadata?.avatar_url ? (
                         <Image
                             source={{ uri: user.user_metadata.avatar_url }}
                             style={styles.avatar}
@@ -122,7 +100,7 @@ const SettingScreen = () => {
                         ]}>
                             {user?.email}
                         </Text>
-                    </View>
+                    </View> */}
                 </View>
             )
         },

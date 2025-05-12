@@ -2,28 +2,30 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import PhoneInput from 'react-native-phone-number-input';
 import { Ionicons } from '@expo/vector-icons';
-import { signUp } from '../../services/authService';
-import { supabase } from '../../services/supabase';
 import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthStore } from '../../store/auth.store';
+import { supabase } from '../../services/supabase';
+import { registerUser } from '../../services/authService';
+import useAuthStore from '../../store/authStore';
 
 const { width, height } = Dimensions.get('window');
 
 const RegisterScreen = ({ navigation }) => {
+    const { setUser } = useAuthStore();
     const [form, setForm] = useState({ fullName: '', email: '', password: '', phone: '' });
     const [phoneNumber, setPhoneNumber] = useState('');
     const phoneInput = useRef(null);    
     const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
-    const { signUp, loading, error, setError } = useAuthStore();
+    const [loading, setLoading] = useState(false)
+
 
     const handleChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
-        if (error) setError(null); 
+        // if (error) setError(null); 
     };
 
     const validate = () => {
@@ -52,45 +54,39 @@ const RegisterScreen = ({ navigation }) => {
 
     const handleRegister = async () => {
         if (!validate()) return;
-        try {
-            const response = await signUp(
-                form.email,
-                form.password,
-                {
-                    full_name: form.fullName,
-                    phone: phoneNumber
-                }
-            );
-            console.log('Registration response:', JSON.stringify(response, null, 2));
 
-            if (response?.user?.identities?.length === 0) {
-                console.warn('User might already exist:', response);
-                Alert.alert(
-                    "Email Exists",
-                    "This email is already registered. Please login instead."
-                );
+        try {
+            setLoading(true);
+            const result = await registerUser(form, phoneNumber, setUser);
+            console.log("result====>", result);
+
+            if (result?.warning) {
+                setLoading(false);
+                Alert.alert('Email Exists', result.warning);
                 navigation.navigate(AUTH_ROUTES.LOGIN);
                 return;
             }
 
+            if (result?.error) {
+                setLoading(false);
+                console.log('Registration error:', result.error.message);
+                Alert.alert('Registration Error', result.error.message);
+                return;
+            }
+
+            setLoading(false);
             Alert.alert(
-                "Verify Email",
-                "A confirmation email has been sent. Please check your inbox."
+                'Verify Email',
+                'A confirmation email has been sent. Please check your inbox.'
             );
             navigation.navigate(AUTH_ROUTES.LOGIN);
         } catch (err) {
-            console.error('Registration error:', {
-                error: err,
-                message: err.message,
-                stack: err.stack,
-                formData: form
-            });
-            Alert.alert(
-                "Registration Error",
-                err.message || "An unexpected error occurred"
-            );
+            setLoading(false);
+            console.error('Registration error:', err);
+            Alert.alert('Registration Error', err.message || 'Something went wrong');
         }
     };
+
 
     const fields = [
         { name: 'fullName', placeholder: 'Full name', secure: false, icon: 'person-outline' },
@@ -236,13 +232,12 @@ const styles = StyleSheet.create({
     },
     animation: {
         width: width * 0.7,
-        height: width * 0.4,
+        height: width * 0.5,
     },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#2d3436',
-    // marginTop: 10,
     },
     subtitle: {
         fontSize: 16,

@@ -1,25 +1,37 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';  // Import Swipeable
 
-const ChatItem = ({ chat, onPress }) => {
+const ChatItem = ({ chat, onPress, onSwipeRight }) => {
+
+    const renderRightActions = () => (
+        <View style={styles.swipeActions}>
+            <TouchableOpacity style={styles.swipeAction} onPress={() => onSwipeRight(chat.id)}>
+                <Text style={styles.swipeActionText}>Delete</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     return (
-        <TouchableOpacity style={styles.chatItem} onPress={onPress}>
-            <Image source={{ uri: chat.avatar }} style={styles.avatar} />
-            <View style={styles.chatInfo}>
-                <View style={styles.chatHeader}>
-                    <Text style={styles.chatName}>{chat.name}</Text>
-                </View>
-                <Text style={styles.lastMessage}>{chat.lastMessage}</Text>
-            </View>
-            <View style={styles.timeContainer}>
-                <Text style={styles.time}>{chat.time}</Text>
-                {chat.unreadCount > 0 && (
-                    <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadCount}>{chat.unreadCount}</Text>
+        <Swipeable renderRightActions={renderRightActions}>
+            <TouchableOpacity style={styles.chatItem} onPress={onPress}>
+                <Image source={{ uri: chat.avatar }} style={styles.avatar} />
+                <View style={styles.chatInfo}>
+                    <View style={styles.chatHeader}>
+                        <Text style={styles.chatName}>{chat.name}</Text>
                     </View>
-                )}
-            </View>
-        </TouchableOpacity>
+                    <Text style={styles.lastMessage}>{chat.lastMessage}</Text>
+                </View>
+                <View style={styles.timeContainer}>
+                    <Text style={styles.time}>{chat.time}</Text>
+                    {chat.unreadCount > 0 && (
+                        <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadCount}>{chat.unreadCount}</Text>
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+        </Swipeable>
     );
 };
 
@@ -76,6 +88,21 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 12,
+    },
+    swipeActions: {
+        width: 75,
+        justifyContent: 'center',
+        backgroundColor: '#f44336',
+    },
+    swipeAction: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+    },
+    swipeActionText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        padding: 10,
     },
 });
 

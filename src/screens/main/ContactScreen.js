@@ -1,108 +1,49 @@
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../services/supabase';
+import React from 'react';
+import { View, Text, FlatList, StyleSheet, Image, Dimensions } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+const { width } = Dimensions.get('window');
+
+const PROFILE = [
+    { id: 1, title: "Email", value: "user@example.com", icon: "email-outline" },
+    { id: 2, title: "Username", value: "john_doe", icon: "account-circle-outline" },
+    { id: 3, title: "Phone Number", value: "+91 9876543210", icon: "phone-outline" },
+    { id: 4, title: "Status", value: "Available", icon: "message-text-outline" },
+];
 
 const ContactScreen = () => {
-    const [userProfile, setUserProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        fetchUserProfile();
-    }, []);
-
-    const fetchUserProfile = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            // Get authenticated user
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
-            if (authError) throw authError;
-
-            if (!user) throw new Error('No authenticated user found');
-
-            // Fetch profile from custom users table by uid
-            const { data, error: profileError } = await supabase
-                .from('users')
-                .select('*') // Select all columns or specify the ones you need
-                .eq('id', user.id)
-                .single();
-
-            if (profileError) throw profileError;
-            if (!data) throw new Error('User profile not found');
-
-            setUserProfile(data);
-        } catch (error) {
-            console.error('Error fetching user profile:', error.message);
-            setError(error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <View style={[styles.container, styles.center]}>
-                <ActivityIndicator size="large" />
-                <Text>Loading user profile...</Text>
+    const renderItem = ({ item }) => (
+        <View style={styles.card}>
+            <Icon name={item.icon} size={22} color="#4CAF50" style={styles.cardIcon} />
+            <View>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardValue}>{item.value}</Text>
             </View>
-        );
-    }
-
-    if (error) {
-        return (
-            <View style={[styles.container, styles.center]}>
-                <Text style={styles.error}>Error: {error}</Text>
-            </View>
-        );
-    }
-
-    if (!userProfile) {
-        return (
-            <View style={[styles.container, styles.center]}>
-                <Text>User profile not found.</Text>
-            </View>
-        );
-    }
+      </View>
+  );
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>My Profile</Text>
+          {/* Profile Header */}
+          <View style={styles.header}>
+              <Image
+                  source={{ uri: 'https://via.placeholder.com/120' }}
+                  style={styles.avatar}
+              />
+              <Text style={styles.name}>John Doe</Text>
+              <Text style={styles.subtitle}>Active now</Text>
+          </View>
 
-            <View style={styles.profileItem}>
-                <Text style={styles.label}>UID:</Text>
-                <Text style={styles.value}>{userProfile.uid}</Text>
-            </View>
-
-            <View style={styles.profileItem}>
-                <Text style={styles.label}>Display Name:</Text>
-                <Text style={styles.value}>{userProfile.display_name || 'Not set'}</Text>
-            </View>
-
-            <View style={styles.profileItem}>
-                <Text style={styles.label}>Email:</Text>
-                <Text style={styles.value}>{userProfile.email}</Text>
-            </View>
-
-            <View style={styles.profileItem}>
-                <Text style={styles.label}>Phone:</Text>
-                <Text style={styles.value}>{userProfile.phone || 'Not provided'}</Text>
-            </View>
-
-            <View style={styles.profileItem}>
-                <Text style={styles.label}>Provider:</Text>
-                <Text style={styles.value}>{userProfile.provider_type}</Text>
-            </View>
-
-            <View style={styles.profileItem}>
-                <Text style={styles.label}>Member Since:</Text>
-                <Text style={styles.value}>
-                    {new Date(userProfile.created_at).toLocaleDateString()}
-                </Text>
-            </View>
-        </View>
-    );
+          {/* Profile Info List */}
+          <FlatList
+              data={PROFILE}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderItem}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+          />
+      </View>
+  );
 };
 
 export default ContactScreen;
@@ -110,36 +51,66 @@ export default ContactScreen;
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#F7F9FC',
+    },
+    header: {
+        alignItems: 'center',
+        paddingVertical: 30,
+        backgroundColor: '#ffffff',
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    avatar: {
+        width: 110,
+        height: 110,
+        borderRadius: 55,
+        borderWidth: 3,
+        borderColor: '#4CAF50',
+        marginBottom: 12,
+    },
+    name: {
+        fontSize: 22,
+        fontWeight: '600',
+        color: '#333',
+    },
+    subtitle: {
+        fontSize: 14,
+        color: '#777',
+        marginTop: 4,
+    },
+    listContent: {
         padding: 20,
     },
-    center: {
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    profileItem: {
+    card: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        alignItems: 'flex-start',
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        elevation: 2,
     },
-    label: {
-        fontWeight: '600',
-        color: '#555',
+    cardIcon: {
+        marginRight: 16,
+        marginTop: 4,
     },
-    value: {
-        flex: 1,
-        textAlign: 'right',
+    cardTitle: {
+        fontSize: 12,
+        color: '#999',
+        marginBottom: 2,
     },
-    error: {
-        color: 'red',
-        textAlign: 'center',
+    cardValue: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#333',
     },
 });
