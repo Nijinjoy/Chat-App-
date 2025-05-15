@@ -14,107 +14,157 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { Ionicons } from '@expo/vector-icons'
 import HeaderComponent from "../../components/HeaderComponent";
 import { supabase } from "../../services/supabase";
+import useAuthStore from "../../store/authStore";
 
 const ChatScreen = () => {
     const navigation = useNavigation()
     const route = useRoute();
-    const { chatId, chatName, avatar } = route.params;
+    const { chatId, chatName, } = route.params;
     const [messageText, setMessageText] = useState("");
     const [messages, setMessages] = useState([]);
+    const [avatar, setAvatar] = useState('https://via.placeholder.com/120');
+    const [currentUser, setCurrentUser] = useState(null); 
     const flatListRef = useRef();
+    const { user } = useAuthStore();
 
-    const getCurrentTime = () => {
-        const now = new Date();
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
-        const ampm = hours >= 12 ? "PM" : "AM";
-        return `${hours % 12 || 12}:${minutes.toString().padStart(2, "0")} ${ampm}`;
-    };
+    const fetchMessages = async () => {
+        const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('chat_id', chatId)
+            .order('created_at', { ascending: true });
 
-    useEffect(() => {
-        const fetchMessages = async () => {
-            const { data, error } = await supabase
-                .from("messages")
-                .select("*")
-                .eq("chat_id", chatId)
-            // .order("timestamp", { ascending: true });
-
-            if (error) {
-                console.error("Failed to fetch messages:", error.message);
-            } else {
-                setMessages(data);
-            }
-        };
-
-        fetchMessages();
-    }, [chatId]);
-
-    const sendMessage = useCallback(async () => {
-        if (messageText.trim() === "") return;
-
-        // const timestamp = getCurrentTime();
-
-        // Get current user
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError || !user) {
-            console.error("User not found:", userError?.message);
+        if (error) {
+            console.error('Error fetching messages:', error);
             return;
         }
+        setMessages(data || []);
+    };
 
-        const newMessage = {
-            chat_id: chatId,
-            sender_id: user.id,
-            text: messageText,
-            // timestamp,
-            // type: "sent",
+    // useEffect(() => {
+    //     const fetchUserProfile = async () => {
+    //         const { data, error } = await supabase.auth.getUser();
+    //         if (error || !data?.user) {
+    //             console.error('User not found:', error);
+    //             return;
+    //         }
+    //         setCurrentUser(data.user);
+    //         setAvatar(data.user.user_metadata?.avatar || 'https://via.placeholder.com/120');
+    //     };
+    //     fetchUserProfile();
+    //     fetchMessages();
+    // }, []);
+
+
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            const { data, error } = await supabase.auth.getUser();
+            if (error || !data?.user) {
+                console.error("User not found:", error);
+                return;
+            }
+            setCurrentUser(data.user);
+            setAvatar(data.user.user_metadata?.avatar || "https://via.placeholder.com/120");
         };
 
-        // Update UI immediately
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: `${prev.length + 1}`,
-                ...newMessage,
-            },
-        ]);
-        setMessageText("");
+        fetchUserProfile();
+        fetchMessages();
 
-        const { error } = await supabase.from("messages").insert([newMessage]);
+        // ✅ Supabase v2 real-time subscription using .channel()
+        const channel = supabase
+            .channel('chat-messages-channel')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `chat_id=eq.${chatId}`,
+                },
+                (payload) => {
+                    console.log('New message received:', payload.new);
+                    setMessages((prevMessages) => [...prevMessages, payload.new]);
+        }
+    )
+        .subscribe();
+
+        // Cleanup on unmount
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [chatId]);
+
+
+    const sendMessage = async () => {
+        if (!messageText.trim()) return;
+
+        if (!currentUser || !currentUser.id) {
+            console.error('❌ currentUser is null or invalid');
+            return;
+        }
+        const { data, error } = await supabase
+            .from('messages')
+            .insert([
+                {
+                    chat_id: chatId,
+                    sender_id: currentUser.id,
+                    message: messageText,
+                    created_at: new Date().toISOString(),
+                },
+            ])
+            .select();
+
         if (error) {
-            console.error("Error saving message:", error.message);
+            console.error('Error sending message:', error.message);
+            return;
+        }
+        setMessages((prevMessages) => [...prevMessages, data[0]]);
+        setMessageText('');
+    };
+
+    const formatDateLabel = (dateString) => {
+        const date = new Date(dateString);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        const isToday =
+            date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
+
+        const isYesterday =
+            date.getDate() === yesterday.getDate() &&
+            date.getMonth() === yesterday.getMonth() &&
+            date.getFullYear() === yesterday.getFullYear();
+
+        if (isToday) return "Today";
+        if (isYesterday) return "Yesterday";
+
+        return date.toLocaleDateString();
+    };
+
+    const groupMessagesWithDateSeparators = () => {
+        const result = [];
+        let lastDate = null;
+
+        for (let i = 0; i < messages.length; i++) {
+            const msgDate = new Date(messages[i].created_at).toDateString();
+            if (msgDate !== lastDate) {
+                result.push({
+                    type: "separator",
+                    id: `separator-${i}`,
+                    dateLabel: formatDateLabel(messages[i].created_at),
+                });
+                lastDate = msgDate;
+            }
+            result.push({ ...messages[i], type: "message" });
         }
 
-        setTimeout(() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-    }, [messageText]);
-
-
-    const renderMessage = ({ item }) => (
-        <View
-            style={[
-                styles.messageContainer,
-                item.type === "sent" ? styles.sentContainer : styles.receivedContainer,
-            ]}
-        >
-            <View
-                style={[
-                    styles.messageBubble,
-                    item.type === "sent" ? styles.sentBubble : styles.receivedBubble,
-                ]}
-            >
-                <Text style={styles.messageText}>{item.text}</Text>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
-            </View>
-        </View>
-    );
+        return result;
+    };
 
 
     return (
@@ -135,13 +185,66 @@ const ChatScreen = () => {
             >
                 <FlatList
                     ref={flatListRef}
-                    data={messages}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderMessage}
-                    contentContainerStyle={styles.chatList}
-                    showsVerticalScrollIndicator={false}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                    data={groupMessagesWithDateSeparators()}
+                    keyExtractor={(item, index) => item?.id?.toString() || `key-${index}`}
+                    contentContainerStyle={{ padding: 10 }}
+                    renderItem={({ item }) => {
+                        if (item.type === "separator") {
+                            return (
+                                <View style={styles.dateSeparatorContainer}>
+                                    <Text style={styles.dateSeparatorText}>{item.dateLabel}</Text>
+                                </View>
+                            );
+                        }
+
+                        const isCurrentUser = item.sender_id === currentUser?.id;
+
+                        return (
+                            <View
+                                style={{
+                                    flexDirection: "row",
+                                    justifyContent: isCurrentUser ? "flex-end" : "flex-start",
+                                    marginBottom: 10,
+                                }}
+                            >
+                                <View
+                                    style={{
+                                        maxWidth: "75%",
+                                        padding: 12,
+                                        backgroundColor: isCurrentUser ? "#dcf8c6" : "#ffffff",
+                                        borderRadius: 16,
+                                        borderTopRightRadius: isCurrentUser ? 0 : 16,
+                                        borderTopLeftRadius: isCurrentUser ? 16 : 0,
+                                        borderBottomLeftRadius: 16,
+                                        borderBottomRightRadius: 16,
+                                        shadowColor: "#000",
+                                        shadowOpacity: 0.05,
+                                        shadowRadius: 2,
+                                        shadowOffset: { width: 0, height: 1 },
+                                        elevation: 1,
+                                    }}
+                                >
+                                    <Text style={{ fontSize: 16, color: "#333" }}>{item.message}</Text>
+                                    <Text
+                                        style={{
+                                            fontSize: 10,
+                                            color: "gray",
+                                            textAlign: "right",
+                                            marginTop: 4,
+                                        }}
+                                    >
+                                        {new Date(item.created_at).toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                        })}
+                                    </Text>
+                                </View>
+                            </View>
+                        );
+                    }}
                 />
+
+
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.iconButton}>
                         <Feather name="plus" size={24} color="gray" />
@@ -284,7 +387,18 @@ const styles = StyleSheet.create({
     icon: {
         marginRight: 20,
     },
-
+    dateSeparatorContainer: {
+        alignSelf: "center",
+        backgroundColor: "#e0e0e0",
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginVertical: 10,
+    },
+    dateSeparatorText: {
+        fontSize: 12,
+        color: "#555",
+    },
 });
 
 export default ChatScreen;

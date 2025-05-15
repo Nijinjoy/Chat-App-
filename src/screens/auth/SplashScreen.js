@@ -1,140 +1,113 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { logo } from '../../assets/images';
+import { LinearGradient } from 'expo-linear-gradient';
 import { chatAnimation, loadingDots } from '../../assets/animations';
-import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import { supabase } from '../../services/supabase';
 
 const { width, height } = Dimensions.get('window');
 
 const SplashScreen = ({ navigation }) => {
-    const fadeAnim = new Animated.Value(0);
-    const logoScale = new Animated.Value(0.5);
-    const textSlide = new Animated.Value(height * 0.1);
-    const bgColor = new Animated.Value(0);
-
-
-    const backgroundColor = bgColor.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['#ffffff', '#f8f9fa']
-    });
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const translateY = useRef(new Animated.Value(20)).current;
 
     useEffect(() => {
-        const checkUserSession = async () => {
-            const { data: { user }, error } = await supabase.auth.getUser();
-            console.log('User Data:', user);
-            console.log('Error:', error);
-            if (user) {
-                navigation.replace('App');
-            } else {
-                navigation.replace('Auth');
-            }
-        };
-
-        Animated.sequence([
+        Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 600,
                 useNativeDriver: true,
             }),
-            Animated.parallel([
-                Animated.spring(logoScale, {
-                    toValue: 1,
-                    friction: 5,
-                    tension: 40,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(textSlide, {
-                    toValue: 0,
-                    duration: 800,
-                    easing: Easing.out(Easing.exp),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(bgColor, {
-                    toValue: 1,
-                    duration: 1500,
-                    useNativeDriver: false,
-                }),
-            ]),
-        ]).start();
+          Animated.spring(scaleAnim, {
+              toValue: 1,
+            friction: 4,
+            useNativeDriver: true,
+        }),
+          Animated.timing(translateY, {
+              toValue: 0,
+            duration: 600,
+            easing: Easing.out(Easing.exp),
+            useNativeDriver: true,
+        }),
+      ]).start();
 
-        // Check user session
-        const timer = setTimeout(() => {
-            checkUserSession();
-        }, 3000);
+        const timer = setTimeout(async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                navigation.replace(user ? 'App' : 'Auth');
+            } catch {
+                navigation.replace('Auth');
+            }
+        }, 2500);
 
         return () => clearTimeout(timer);
-    }, [navigation]);
+    }, []);
 
     return (
-        <Animated.View style={[styles.container, { backgroundColor }]}>
-            <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: logoScale }] }}>
+        <LinearGradient colors={['#d1f0e1', '#ffffff']} style={styles.container}>
+            <Animated.View style={[styles.logoContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
                 <LottieView
                     source={chatAnimation}
                     autoPlay
                     loop={false}
-                    style={styles.logoAnimation}
-                    resizeMode="contain"
+                    style={styles.logo}
                 />
             </Animated.View>
 
-            <Animated.View style={[styles.textContainer, { transform: [{ translateY: textSlide }] }]}>
+            <Animated.View style={[styles.textContainer, { transform: [{ translateY }] }]}>
                 <Text style={styles.title}>WeChat</Text>
                 <Text style={styles.subtitle}>Secure messaging for everyone</Text>
             </Animated.View>
 
             <View style={styles.loadingContainer}>
-                <LottieView
-                    source={loadingDots}
-                    autoPlay
-                    loop
-                    style={styles.loadingAnimation}
-                />
-                <Text style={styles.loadingText}>Getting things ready...</Text>
+                <LottieView source={loadingDots} autoPlay loop style={styles.loadingAnimation} />
+                <Text style={styles.loadingText}>Preparing your experience...</Text>
             </View>
-        </Animated.View>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        justifyContent: 'center',
     },
-    logoAnimation: {
-        width: width * 0.5,
-        height: width * 0.5,
+    logoContainer: {
+        marginBottom: 30,
+    },
+    logo: {
+        width: width * 0.45,
+        height: width * 0.45,
     },
     textContainer: {
         alignItems: 'center',
     },
     title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: '#2d3436',
-        fontFamily: 'System', 
+        fontSize: 34,
+        fontWeight: '700',
+        color: '#1e272e',
+        letterSpacing: 1,
     },
     subtitle: {
         fontSize: 16,
         color: '#636e72',
-        fontWeight: '500',
+        marginTop: 6,
     },
     loadingContainer: {
         position: 'absolute',
-        bottom: height * 0.15,
+        bottom: height * 0.1,
         alignItems: 'center',
     },
     loadingAnimation: {
-        width: 80,
-        height: 40,
+        width: 60,
+        height: 30,
     },
     loadingText: {
         fontSize: 14,
-        color: '#b2bec3',
-        fontWeight: '500',
+        color: '#8395a7',
+        marginTop: 5,
     },
 });
 

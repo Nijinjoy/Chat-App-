@@ -33,14 +33,6 @@ const HeaderComponent = ({
                     {status && <Text style={styles.status}>{status}</Text>}
                 </View>
             </View>
-
-            {showIcons && (
-                <View style={styles.headerRight}>
-                    <Ionicons name="videocam" size={24} color="white" style={styles.icon} />
-                    <Ionicons name="call" size={24} color="white" style={styles.icon} />
-                    <Ionicons name="ellipsis-vertical" size={20} color="white" />
-                </View>
-            )}
         </View>
     );
 };

@@ -1,119 +1,124 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Dimensions,
+    TouchableOpacity,
+    FlatList,
+    Animated,
+    Image,
+    useColorScheme,
+} from 'react-native';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { chat, chatAnimation, secure, share } from '../../assets/animations';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { chat, secure, share } from '../../assets/animations';
 
 const { width } = Dimensions.get('window');
+
+const slides = [
+    {
+        id: 1,
+        title: 'Connect with Friends',
+        description: 'Chat with your friends and family in real-time',
+        animation: chat,
+    },
+    {
+        id: 2,
+        title: 'Secure Messaging',
+        description: 'End-to-end encryption for all your conversations',
+        animation: secure,
+    },
+    {
+        id: 3,
+        title: 'Share Moments',
+        description: 'Send photos, videos and documents instantly',
+        animation: share,
+    },
+];
 
 const WelcomeScreen = () => {
     const navigation = useNavigation();
     const [currentIndex, setCurrentIndex] = useState(0);
-    const animationRefs = useRef([]);
+    const scrollX = useRef(new Animated.Value(0)).current;
+    const flatListRef = useRef();
+    const isDark = useColorScheme() === 'dark';
 
-    const slides = [
-        {
-            id: 1,
-            title: 'Connect with Friends',
-            description: 'Chat with your friends and family in real-time',
-            animation: chat,
-        },
-        {
-            id: 2,
-            title: 'Secure Messaging',
-            description: 'End-to-end encryption for all your conversations',
-            animation: secure,
-        },
-        {
-            id: 3,
-            title: 'Share Moments',
-            description: 'Send photos, videos and documents instantly',
-            animation: share,
-        },
-    ];
-
-    const scrollTo = () => {
+    const handleNext = () => {
         if (currentIndex < slides.length - 1) {
-            animationRefs.current[currentIndex + 1]?.play();
-            setCurrentIndex(currentIndex + 1);
+            flatListRef.current.scrollToIndex({ index: currentIndex + 1 });
         } else {
             navigation.replace('Auth', { screen: 'Register' });
         }
     };
 
+    const handleSkip = () => {
+        navigation.replace('Auth', { screen: 'Register' });
+    };
+
+    const onViewableItemsChanged = useRef(({ viewableItems }) => {
+        if (viewableItems.length > 0) {
+            setCurrentIndex(viewableItems[0].index);
+        }
+    }).current;
+
     return (
-        <View style={styles.container}>
-            <View style={styles.slideContainer}>
-                <LottieView
-                    source={slides[currentIndex].animation}
-                    autoPlay
-                    loop
-                    style={styles.animation}
+        <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#000' : '#fff' }]}>
+            {currentIndex < slides.length - 1 && (
+                <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+                    <Text style={styles.skipText}>Skip</Text>
+                </TouchableOpacity>
+            )}
+
+            <FlatList
+                ref={flatListRef}
+                data={slides}
+                keyExtractor={(item) => item.id.toString()}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                    { useNativeDriver: false }
+                )}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+                renderItem={({ item }) => (
+                    <View style={styles.slideContainer}>
+                        <LottieView source={item.animation} autoPlay loop style={styles.animation} />
+                        <Text style={[styles.title, { color: isDark ? '#fff' : '#333' }]}>{item.title}</Text>
+                        <Text style={[styles.description, { color: isDark ? '#aaa' : '#666' }]}>{item.description}</Text>
+                    </View>
+                )}
+            />
+
+            <View style={styles.progressBar}>
+                <View
+                    style={[styles.progress, { width: `${((currentIndex + 1) / slides.length) * 100}%` }]}
                 />
-                <Text style={styles.title}>{slides[currentIndex].title}</Text>
-                <Text style={styles.description}>{slides[currentIndex].description}</Text>
             </View>
 
-            <Paginator data={slides} currentIndex={currentIndex} />
-
-            <TouchableOpacity style={styles.button} onPress={scrollTo}>
+            <TouchableOpacity style={styles.button} onPress={handleNext}>
                 <Text style={styles.buttonText}>
                     {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
                 </Text>
             </TouchableOpacity>
-        </View>
+        </SafeAreaView>
     );
 };
-
-// Create a new file Paginator.js
-const Paginator = ({ data, currentIndex }) => {
-    return (
-        <View style={paginatorStyles.container}>
-            {data.map((_, i) => (
-                <View
-                    key={i.toString()}
-                    style={[
-                        paginatorStyles.dot,
-                        i === currentIndex ? paginatorStyles.dotActive : null,
-                    ]}
-        />
-            ))}
-        </View>
-    );
-};
-
-const paginatorStyles = StyleSheet.create({
-    container: {
-        flexDirection: 'row',
-        height: 64,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    dot: {
-        height: 10,
-        borderRadius: 5,
-        backgroundColor: '#ccc',
-        marginHorizontal: 8,
-        width: 10,
-    },
-    dotActive: {
-        backgroundColor: '#007AFF',
-        width: 20,
-    },
-});
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
     },
     slideContainer: {
-        flex: 1,
+        width,
         justifyContent: 'center',
         alignItems: 'center',
-        width: width * 0.9,
+        paddingHorizontal: 20,
     },
     animation: {
         width: width * 0.8,
@@ -125,13 +130,11 @@ const styles = StyleSheet.create({
         marginTop: 32,
         marginBottom: 10,
         textAlign: 'center',
-        color: '#333',
     },
     description: {
         fontSize: 16,
         textAlign: 'center',
-        color: '#666',
-        paddingHorizontal: 40,
+        paddingHorizontal: 30,
     },
     button: {
         backgroundColor: '#007AFF',
@@ -139,11 +142,39 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         borderRadius: 25,
         marginBottom: 50,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 5,
+        elevation: 4,
     },
     buttonText: {
         color: 'white',
         fontSize: 18,
         fontWeight: '600',
+    },
+    skipButton: {
+        position: 'absolute',
+        top: 50,
+        right: 30,
+        zIndex: 1,
+    },
+    skipText: {
+        color: '#007AFF',
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    progressBar: {
+        height: 6,
+        width: '80%',
+        backgroundColor: '#ccc',
+        borderRadius: 3,
+        marginBottom: 20,
+    },
+    progress: {
+        height: '100%',
+        backgroundColor: '#007AFF',
+        borderRadius: 3,
     },
 });
 

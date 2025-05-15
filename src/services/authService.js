@@ -33,7 +33,6 @@ export const registerUser = async (form, phoneNumber, setUser) => {
         if (insertResponse.error) {
             return { error: insertResponse.error.message };
         }
-        // const { setUser } = useAuthStore.getState();
         setUser(data.user);
         return { data, insertData: insertResponse.data };
     } catch (err) {
@@ -41,3 +40,37 @@ export const registerUser = async (form, phoneNumber, setUser) => {
         return { error: err.message || 'An unexpected error occurred.' };
     }
 };
+
+// authService.js
+const signOut = async () => {
+    try {
+        console.log('[AuthService] Starting sign-out process');
+
+        // Sign out from Supabase
+        const { error: supabaseError } = await supabase.auth.signOut();
+        if (supabaseError) {
+            console.error('[AuthService] Supabase sign-out error:', supabaseError);
+            throw supabaseError;
+        }
+
+        // Clear local storage
+        await AsyncStorage.multiRemove([
+            'auth_token',
+            'user_profile',
+            'session_data'
+        ]);
+
+        console.log('[AuthService] Sign-out completed successfully');
+        return { success: true };
+
+    } catch (error) {
+        console.error('[AuthService] Sign-out failed:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to sign out'
+        };
+    }
+};
+
+export { signOut };
+

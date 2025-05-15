@@ -32,7 +32,7 @@ const useAuthStore = create((set) => ({
     },
 
     // Method to set the user only (for registration/login purposes)
-    setUser: (user) => set({ user }),  // Add the setUser method to update user
+    setUser: (user) => set({ user }),  // Add the setUse r method to update user
 }));
 
 export default useAuthStore;

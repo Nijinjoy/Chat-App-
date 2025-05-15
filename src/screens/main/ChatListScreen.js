@@ -34,8 +34,6 @@ const ChatListScreen = () => {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-
-            // Get logged-in user ID
             const {
                 data: { user },
                 error: userError
@@ -45,10 +43,7 @@ const ChatListScreen = () => {
                 console.error('Failed to get logged in user:', userError.message);
                 return;
             }
-
             setCurrentUserId(user.id);
-
-            // Fetch all users
             const { data, error } = await supabase
                 .from('users')
                 .select('id, email, full_name, created_at')
@@ -58,10 +53,7 @@ const ChatListScreen = () => {
                 console.error('Error fetching users:', error.message);
                 return;
             }
-
-            // Exclude current user
             const filteredUsers = data.filter((u) => u.id !== user.id);
-
             setUsers(filteredUsers);
         } catch (err) {
             console.error('Unexpected error:', err.message);
@@ -70,7 +62,6 @@ const ChatListScreen = () => {
             setRefreshing(false);
         }
     };
-
 
     useEffect(() => {
         fetchUsers();
@@ -110,7 +101,7 @@ const ChatListScreen = () => {
         } else {
             navigation.navigate(APP_ROUTES.CHAT_DETAIL, {
                 chatId: user.id,
-                chatName: user.full_name,  // This will be the username
+                chatName: user.full_name,  
                 avatar: user.avatar || 'default-avatar-url'
             });
         }
@@ -230,7 +221,6 @@ const ChatListScreen = () => {
                     )
                 }
             />
-
             <TouchableOpacity style={styles.fab}  >
                 <Ionicons name="chatbubble" size={24} color="white" />
             </TouchableOpacity>

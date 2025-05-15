@@ -15,12 +15,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../services/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../contexts/ThemeContext';
-import { registerForPushNotificationsAsync } from '../../utils/notificationService';
-import { AUTH_ROUTES } from '../../navigation/AuthStack';
+import { signOut } from '../../services/authService';
+import useAuthStore from '../../store/authStore';
 
 const SettingScreen = () => {
     const navigation = useNavigation();
+    const { clearSessionData } = useAuthStore();
     const [darkMode, setDarkMode] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -43,11 +43,15 @@ const SettingScreen = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            const { error } = await supabase.auth.signOut();
-                            if (error) throw error;
+                            const signOutResponse = await signOut(); // Call the sign-out service
+                            if (!signOutResponse.success) {
+                                throw new Error(signOutResponse.error);
+                            }
 
-                            signOut(); // From your auth store
+                            // Clear session data from Zustand store
+                            clearSessionData(); // Call Zustand method to clear session and user
 
+                            // Redirect to login screen
                             navigation.replace('Auth', { screen: 'Login' });
                         } catch (error) {
                             console.error('Error signing out:', error.message);
@@ -63,47 +67,14 @@ const SettingScreen = () => {
         );
     };
 
+
+
+
     const handleDeleteAccount = async () => {
 
     };
 
     const sections = [
-        {
-            id: 'profile',
-            renderItem: () => (
-                <View style={styles.profileSection}>
-                    {/* {user?.user_metadata?.avatar_url ? (
-                        <Image
-                            source={{ uri: user.user_metadata.avatar_url }}
-                            style={styles.avatar}
-                        />
-                    ) : (
-                        <View style={[
-                            styles.avatarPlaceholder,
-                            darkMode && styles.darkAvatarPlaceholder
-                        ]}>
-                            <Text style={styles.avatarText}>
-                                {user?.user_metadata?.full_name?.charAt(0).toUpperCase() || 'U'}
-                            </Text>
-                        </View>
-                    )}
-                    <View style={styles.profileInfo}>
-                        <Text style={[
-                            styles.name,
-                            darkMode && styles.darkText
-                        ]}>
-                            {user?.user_metadata?.full_name || 'User'}
-                        </Text>
-                        <Text style={[
-                            styles.email,
-                            darkMode && styles.darkSecondaryText
-                        ]}>
-                            {user?.email}
-                        </Text>
-                    </View> */}
-                </View>
-            )
-        },
         {
             id: 'preferences',
             title: 'Preferences',
