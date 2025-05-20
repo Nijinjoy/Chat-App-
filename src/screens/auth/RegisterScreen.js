@@ -6,9 +6,9 @@ import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
 import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../../services/supabase';
 import { registerUser } from '../../services/authService';
 import useAuthStore from '../../store/authStore';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,11 +21,9 @@ const RegisterScreen = ({ navigation }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false)
 
-
     const handleChange = (name, value) => {
         setForm(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
-        // if (error) setError(null); 
     };
 
     const validate = () => {
@@ -118,7 +116,6 @@ const RegisterScreen = ({ navigation }) => {
                         <Text style={styles.title}>Create Account</Text>
                         <Text style={styles.subtitle}>Join our community today</Text>
                     </View>
-
                     <View style={styles.formContainer}>
                         <View style={styles.inputWrapper}>
                             <PhoneInput
@@ -165,11 +162,7 @@ const RegisterScreen = ({ navigation }) => {
                                     />
                                     {field.secure && (
                                         <TouchableOpacity
-                                            onPress={() =>
-                                                field.name === 'password'
-                                                    ? setShowPassword(!showPassword)
-                                                    : setShowConfirmPassword(!showConfirmPassword)
-                                            }
+                                            onPress={() => setShowPassword(!showPassword)} s
                                             style={styles.eyeIcon}
                                         >
                                             <Ionicons
