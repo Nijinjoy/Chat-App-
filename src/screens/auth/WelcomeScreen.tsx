@@ -15,21 +15,27 @@ import LottieView from 'lottie-react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { chat, secure, share } from '../../assets/animations';
+import { NavigatorScreenParams } from '@react-navigation/native';
 
-// Define dimensions
 const { width } = Dimensions.get('window');
 
-// Define navigation type
-type RootStackParamList = {
-  Auth: { screen: string };
-};
+type AuthStackParamList = {
+    Register: undefined;
+    Login: undefined;
+  };
+  
+  type RootStackParamList = {
+    Auth: NavigatorScreenParams<AuthStackParamList>;
+  };
 
-type Slide = {
-  id: number;
-  title: string;
-  description: string;
-  animation: object; 
-};
+  //if we want to extend our properties in future,we use interface
+  interface Slide{
+    id:number,
+    title:string,
+    description:string,
+    animation:object
+  }
+  
 
 const slides: Slide[] = [
   {

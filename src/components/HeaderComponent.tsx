@@ -1,10 +1,20 @@
-// components/HeaderComponent.js
 import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const HeaderComponent = ({
+interface HeaderComponentProps {
+    title?: string;
+    chatName?: string;
+    avatar?: string;
+    status?: string;
+    showAvatar?: boolean;
+    showIcons?: boolean;
+    showBack?: boolean;
+}
+
+const HeaderComponent: React.FC<HeaderComponentProps> = ({
     title,
     chatName,
     avatar,
@@ -13,7 +23,7 @@ const HeaderComponent = ({
     showIcons = false,
     showBack = false,
 }) => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
     return (
         <View style={styles.header}>

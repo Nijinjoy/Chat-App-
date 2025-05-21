@@ -1,9 +1,32 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';  // Import Swipeable
+import {
+    View,
+    Text,
+    Image,
+    TouchableOpacity,
+    StyleSheet,
+    GestureResponderEvent,
+    StyleProp,
+    ViewStyle
+} from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
-const ChatItem = ({ chat, onPress, onSwipeRight }) => {
+interface Chat {
+    id: string | number;
+    avatar: string;
+    name: string;
+    lastMessage: string;
+    time: string;
+    unreadCount: number;
+}
 
+interface ChatItemProps {
+    chat: Chat;
+    onPress: (event: GestureResponderEvent) => void;
+    onSwipeRight: (id: string | number) => void;
+}
+
+const ChatItem: React.FC<ChatItemProps> = ({ chat, onPress, onSwipeRight }) => {
     const renderRightActions = () => (
         <View style={styles.swipeActions}>
             <TouchableOpacity style={styles.swipeAction} onPress={() => onSwipeRight(chat.id)}>
@@ -34,6 +57,8 @@ const ChatItem = ({ chat, onPress, onSwipeRight }) => {
         </Swipeable>
     );
 };
+
+export default ChatItem;
 
 const styles = StyleSheet.create({
     chatItem: {
@@ -105,5 +130,3 @@ const styles = StyleSheet.create({
         padding: 10,
     },
 });
-
-export default ChatItem;

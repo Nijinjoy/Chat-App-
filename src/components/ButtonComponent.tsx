@@ -5,20 +5,38 @@ import {
     TouchableOpacity,
     StyleSheet,
     ActivityIndicator,
-    Image
+    Image,
+    GestureResponderEvent,
+    ImageSourcePropType,
+    StyleProp,
+    ViewStyle,
+    TextStyle,
 } from 'react-native';
 
-const ButtonComponent = ({
+interface ButtonComponentProps {
+    title: string;
+    onPress: (event: GestureResponderEvent) => void;
+    loading?: boolean;
+    disabled?: boolean;
+    icon?: ImageSourcePropType;
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
+    backgroundColor?: string;
+    textColor?: string;
+    border?: boolean;
+}
+
+const ButtonComponent: React.FC<ButtonComponentProps> = ({
     title,
     onPress,
     loading = false,
     disabled = false,
-    icon, // e.g., require('../../assets/images/google.png')
+    icon,
     style = {},
     textStyle = {},
     backgroundColor = '#4A80F0',
     textColor = '#fff',
-    border = false
+    border = false,
 }) => {
     return (
         <TouchableOpacity
@@ -28,10 +46,10 @@ const ButtonComponent = ({
                 {
                     backgroundColor: border ? '#fff' : backgroundColor,
                     borderWidth: border ? 1 : 0,
-                    borderColor: '#dfe6e9'
+                    borderColor: '#dfe6e9',
                 },
                 style,
-                disabled && styles.disabled
+                disabled && styles.disabled,
             ]}
             activeOpacity={0.8}
             disabled={disabled || loading}
