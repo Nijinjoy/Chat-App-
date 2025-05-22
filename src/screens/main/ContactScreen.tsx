@@ -13,66 +13,85 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import useAuthStore from '../../store/authStore';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '../../services/supabase';
 import * as FileSystem from 'expo-file-system';
+import { supabase } from '../../services/supabase';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
+
+type RootStackParamList = {
+    ContactScreen: undefined;
+};
+
+type ContactScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ContactScreen'>;
+type ContactScreenRouteProp = RouteProp<RootStackParamList, 'ContactScreen'>;
+
+type Props = {
+    navigation: ContactScreenNavigationProp;
+    route: ContactScreenRouteProp;
+};
+
+type ProfileItem = {
+    id: number;
+    title: string;
+    value: string;
+    icon: string;
+};
 
 const { width } = Dimensions.get('window');
 
-const ContactScreen = ({ navigation }) => {
-    const [profileData, setProfileData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [userName, setUserName] = useState('');
-    const [avatar, setAvatar] = useState('https://via.placeholder.com/120');
-
-    const { user } = useAuthStore();
+const ContactScreen: React.FC<Props> = ({ navigation }) => {
+    const [profileData, setProfileData] = useState<ProfileItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [userName, setUserName] = useState<string>('');
+    const [avatar, setAvatar] = useState<string>('https://via.placeholder.com/120');
 
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                const { data: { user }, error } = await supabase.auth.getUser();
-                console.log("using===>", user);
-                if (error) {
-                    console.error('Error fetching user:', error);
-                } else {
-                    const metadata = user?.user_metadata || {};
-                    console.log("User metadata:", metadata);
-                    console.log("User email:", user.email);
-                    console.log("User full name:", metadata.full_name);
-                    const profileItems = [
-                        {
-                            id: 1,
-                            title: 'Email',
-                            value: user.email || 'N/A',
-                            icon: 'email-outline',
-                        },
-                        {
-                            id: 2,
-                            title: 'Username',
-                            value: metadata.full_name || 'N/A',
-                            icon: 'account-circle-outline',
-                        },
-                        {
-                            id: 3,
-                            title: 'Phone Number',
-                            value: metadata.phone || 'N/A',
-                            icon: 'phone-outline',
-                        },
-                        {
-                            id: 4,
-                            title: 'Status',
-                            value: 'Available',
-                            icon: 'message-text-outline',
-                        },
-                    ];
+                const {
+                    data: { user },
+                    error,
+                } = await supabase.auth.getUser();
 
-                    setProfileData(profileItems);
-                    setUserName(metadata.full_name || 'User');
-                    setLoading(false);
+                if (error || !user) {
+                    console.error('Error fetching user:', error);
+                    return;
                 }
+
+                const metadata = user.user_metadata || {};
+                const profileItems: ProfileItem[] = [
+                    {
+                        id: 1,
+                        title: 'Email',
+                        value: user.email || 'N/A',
+                        icon: 'email-outline',
+                    },
+                    {
+                        id: 2,
+                        title: 'Username',
+                        value: metadata.full_name || 'N/A',
+                        icon: 'account-circle-outline',
+                    },
+                    {
+                        id: 3,
+                        title: 'Phone Number',
+                        value: metadata.phone || 'N/A',
+                        icon: 'phone-outline',
+                    },
+                    {
+                        id: 4,
+                        title: 'Status',
+                        value: 'Available',
+                        icon: 'message-text-outline',
+                    },
+                ];
+
+                setProfileData(profileItems);
+                setUserName(metadata.full_name || 'User');
             } catch (err) {
                 console.error('Unexpected error:', err);
+            } finally {
                 setLoading(false);
             }
         };
@@ -87,16 +106,17 @@ const ContactScreen = ({ navigation }) => {
                 Alert.alert('Permission Denied', 'Permission is required to access the gallery');
                 return;
             }
+
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [1, 1],
                 quality: 0.7,
             });
-            if (!result.canceled && result.assets && result.assets.length > 0) {
+
+            if (!result.canceled && result.assets.length > 0) {
                 const image = result.assets[0];
-                console.log("image===>", image);
-                uploadAvatar(image);
+                await uploadAvatar(image);
             }
         } catch (error) {
             console.error('Image picker error:', error);
@@ -104,24 +124,28 @@ const ContactScreen = ({ navigation }) => {
         }
     };
 
-    const uriToBlob = async (uri) => {
+    const uriToBlob = async (uri: string): Promise<Blob> => {
         const base64 = await FileSystem.readAsStringAsync(uri, {
             encoding: FileSystem.EncodingType.Base64,
         });
-        return new Blob([Uint8Array.from(atob(base64), c => c.charCodeAt(0))], {
-            type: 'image/jpeg',
-        });
+
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length).fill(0).map((_, i) => byteCharacters.charCodeAt(i));
+        const byteArray = new Uint8Array(byteNumbers);
+
+        return new Blob([byteArray], { type: 'image/jpeg' });
     };
 
-
-    const uploadAvatar = async (image) => {
+    const uploadAvatar = async (image: ImagePicker.ImagePickerAsset) => {
         try {
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            const {
+                data: { user },
+                error: userError,
+            } = await supabase.auth.getUser();
+
             if (userError || !user) throw new Error('User not found');
 
-            // ✅ FIXED Blob conversion
             const blob = await uriToBlob(image.uri);
-
             const fileExt = image.uri.split('.').pop() || 'jpg';
             const fileName = `${user.id}_${Date.now()}.${fileExt}`;
             const filePath = `avatars/${fileName}`;
@@ -129,7 +153,6 @@ const ContactScreen = ({ navigation }) => {
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
                 .upload(filePath, blob, {
-                    // contentType: image.mimeType || 'image/jpeg',
                     contentType: 'image/jpeg',
                     upsert: true,
                 });
@@ -139,7 +162,6 @@ const ContactScreen = ({ navigation }) => {
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
             const publicUrl = urlData.publicUrl;
 
-            // ✅ Update user table metadata with avatar_url
             const { error: updateError } = await supabase.auth.updateUser({
                 data: { avatar_url: publicUrl },
             });
@@ -148,15 +170,13 @@ const ContactScreen = ({ navigation }) => {
 
             setAvatar(publicUrl);
             Alert.alert('Success', 'Profile picture updated!');
-        } catch (err) {
+        } catch (err: any) {
             console.error('Upload failed:', err);
             Alert.alert('Upload Failed', err.message || 'An unexpected error occurred.');
         }
     };
 
-
-    console.log('Current user:', JSON.stringify(user, null, 2));
-    const renderItem = ({ item }) => (
+    const renderItem = ({ item }: { item: ProfileItem }) => (
         <View style={styles.card}>
             <Icon name={item.icon} size={22} color="#4CAF50" style={styles.cardIcon} />
             <View>
@@ -164,7 +184,7 @@ const ContactScreen = ({ navigation }) => {
                 <Text style={styles.cardValue}>{item.value}</Text>
             </View>
         </View>
-  );
+    );
 
     return (
         <View style={styles.container}>
@@ -175,26 +195,28 @@ const ContactScreen = ({ navigation }) => {
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Contact Info</Text>
             </View>
+
             {loading ? (
                 <ActivityIndicator size="large" color="#4CAF50" style={{ marginTop: 40 }} />
             ) : (
                 <>
-                        <TouchableOpacity onPress={handlePickImage} style={styles.header}>
-                            <Image source={{ uri: avatar }} style={styles.avatar} />
-                            <Text style={styles.name}>{userName}</Text>
-                            <Text style={styles.subtitle}>Tap to change profile photo</Text>
-                        </TouchableOpacity>
-          <FlatList
-                            data={profileData}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderItem}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-          />
+                    <TouchableOpacity onPress={handlePickImage} style={styles.header}>
+                        <Image source={{ uri: avatar }} style={styles.avatar} />
+                        <Text style={styles.name}>{userName}</Text>
+                        <Text style={styles.subtitle}>Tap to change profile photo</Text>
+                    </TouchableOpacity>
+
+                    <FlatList
+                        data={profileData}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        showsVerticalScrollIndicator={false}
+                    />
                 </>
             )}
-      </View>
-  );
+        </View>
+    );
 };
 
 export default ContactScreen;
@@ -243,7 +265,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: 15,
-        marginTop: 20
+        marginTop: 20,
     },
     card: {
         flexDirection: 'row',
@@ -252,7 +274,7 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 16,
         alignItems: 'flex-start',
-        shadowColor: "#000",
+        shadowColor: '#000',
         shadowOpacity: 0.05,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 4,

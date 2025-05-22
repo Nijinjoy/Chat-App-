@@ -20,7 +20,6 @@ import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
 import { LinearGradient } from 'expo-linear-gradient';
 import { registerUser } from '../../services/authService';
-import useAuthStore from '../../store/authStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -47,7 +46,6 @@ interface Errors {
 }
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
-  const { setUser } = useAuthStore();
   const [form, setForm] = useState<FormState>({
     fullName: '',
     email: '',
@@ -91,33 +89,35 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     return valid;
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (): Promise<void> => {
     if (!validate()) return;
     try {
       setLoading(true);
       const result = await registerUser(form, phoneNumber, setUser);
+      console.log('result ===>', result);
       if (result?.warning) {
-        setLoading(false);
         Alert.alert('Email Exists', result.warning);
         navigation.navigate(AUTH_ROUTES.LOGIN);
         return;
       }
       if (result?.error) {
-        setLoading(false);
-        Alert.alert('Registration Error', result.error.message);
+        Alert.alert('Registration Error', result.error);
         return;
       }
-      setLoading(false);
       Alert.alert(
         'Verify Email',
         'A confirmation email has been sent. Please check your inbox.'
       );
       navigation.navigate(AUTH_ROUTES.LOGIN);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Something went wrong';
+      Alert.alert('Registration Error', errorMessage);
+    } finally {
       setLoading(false);
-      Alert.alert('Registration Error', err.message || 'Something went wrong');
     }
   };
+  
 
   const fields = [
     { name: 'fullName', placeholder: 'Full name', secure: false, icon: 'person-outline' },

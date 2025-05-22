@@ -16,18 +16,45 @@ import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import HeaderComponent from "../../components/HeaderComponent";
 import { supabase } from "../../services/supabase";
-import useAuthStore from "../../store/authStore";
+// import useAuthStore from "../../store/authStore";
+
+// Define types for your data structures
+type Message = {
+    id: string;
+    chat_id: string;
+    sender_id: string;
+    message: string;
+    created_at: string;
+    type?: string; // Optional because we'll add it in groupMessagesWithDateSeparators
+};
+
+type SeparatorItem = {
+    type: "separator";
+    id: string;
+    dateLabel: string;
+};
+
+type MessageItem = Message & {
+    type: "message";
+};
+
+type ChatScreenParams = {
+    chatId: string;
+    chatName: string;
+};
+
+type ListItem = SeparatorItem | MessageItem;
 
 const ChatScreen = () => {
-    const navigation = useNavigation()
+    const navigation = useNavigation();
     const route = useRoute();
-    const { chatId, chatName, } = route.params;
-    const [messageText, setMessageText] = useState("");
-    const [messages, setMessages] = useState([]);
-    const [avatar, setAvatar] = useState('https://via.placeholder.com/120');
-    const [currentUser, setCurrentUser] = useState(null); 
-    const flatListRef = useRef();
-    const { user } = useAuthStore();
+    const { chatId, chatName } = route.params as ChatScreenParams;
+    const [messageText, setMessageText] = useState<string>("");
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [avatar, setAvatar] = useState<string>('https://via.placeholder.com/120');
+    const [currentUser, setCurrentUser] = useState<any>(null); // Replace 'any' with your User type if available
+    const flatListRef = useRef<FlatList>(null);
+    // const { user } = useAuthStore();
 
     const fetchMessages = async () => {
         const { data, error } = await supabase
@@ -43,21 +70,6 @@ const ChatScreen = () => {
         setMessages(data || []);
     };
 
-    // useEffect(() => {
-    //     const fetchUserProfile = async () => {
-    //         const { data, error } = await supabase.auth.getUser();
-    //         if (error || !data?.user) {
-    //             console.error('User not found:', error);
-    //             return;
-    //         }
-    //         setCurrentUser(data.user);
-    //         setAvatar(data.user.user_metadata?.avatar || 'https://via.placeholder.com/120');
-    //     };
-    //     fetchUserProfile();
-    //     fetchMessages();
-    // }, []);
-
-
     useEffect(() => {
         const fetchUserProfile = async () => {
             const { data, error } = await supabase.auth.getUser();
@@ -72,7 +84,6 @@ const ChatScreen = () => {
         fetchUserProfile();
         fetchMessages();
 
-        // ✅ Supabase v2 real-time subscription using .channel()
         const channel = supabase
             .channel('chat-messages-channel')
             .on(
@@ -85,17 +96,15 @@ const ChatScreen = () => {
                 },
                 (payload) => {
                     console.log('New message received:', payload.new);
-                    setMessages((prevMessages) => [...prevMessages, payload.new]);
-        }
-    )
-        .subscribe();
+                    setMessages((prevMessages) => [...prevMessages, payload.new as Message]);
+                }
+            )
+            .subscribe();
 
-        // Cleanup on unmount
         return () => {
             supabase.removeChannel(channel);
         };
     }, [chatId]);
-
 
     const sendMessage = async () => {
         if (!messageText.trim()) return;
@@ -104,6 +113,7 @@ const ChatScreen = () => {
             console.error('❌ currentUser is null or invalid');
             return;
         }
+
         const { data, error } = await supabase
             .from('messages')
             .insert([
@@ -120,11 +130,14 @@ const ChatScreen = () => {
             console.error('Error sending message:', error.message);
             return;
         }
-        setMessages((prevMessages) => [...prevMessages, data[0]]);
-        setMessageText('');
+
+        if (data) {
+            setMessages((prevMessages) => [...prevMessages, data[0] as Message]);
+            setMessageText('');
+        }
     };
 
-    const formatDateLabel = (dateString) => {
+    const formatDateLabel = (dateString: string): string => {
         const date = new Date(dateString);
         const today = new Date();
         const yesterday = new Date();
@@ -146,26 +159,25 @@ const ChatScreen = () => {
         return date.toLocaleDateString();
     };
 
-    const groupMessagesWithDateSeparators = () => {
-        const result = [];
-        let lastDate = null;
+    const groupMessagesWithDateSeparators = (): ListItem[] => {
+        const result: ListItem[] = [];
+        let lastDate: string | null = null;
 
-        for (let i = 0; i < messages.length; i++) {
-            const msgDate = new Date(messages[i].created_at).toDateString();
+        messages.forEach((message, index) => {
+            const msgDate = new Date(message.created_at).toDateString();
             if (msgDate !== lastDate) {
                 result.push({
                     type: "separator",
-                    id: `separator-${i}`,
-                    dateLabel: formatDateLabel(messages[i].created_at),
+                    id: `separator-${index}`,
+                    dateLabel: formatDateLabel(message.created_at),
                 });
                 lastDate = msgDate;
             }
-            result.push({ ...messages[i], type: "message" });
-        }
+            result.push({ ...message, type: "message" });
+        });
 
         return result;
     };
-
 
     return (
         <SafeAreaView style={styles.container}>
@@ -243,7 +255,6 @@ const ChatScreen = () => {
                         );
                     }}
                 />
-
 
                 <View style={styles.inputContainer}>
                     <TouchableOpacity style={styles.iconButton}>

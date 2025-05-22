@@ -19,17 +19,32 @@ import { APP_ROUTES } from '../../navigation/AppStack';
 import { supabase } from '../../services/supabase';
 import ChatItem from '../../components/ChatItem';
 
-const ChatListScreen = () => {
-    const navigation = useNavigation()
-    const [searchMode, setSearchMode] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedChats, setSelectedChats] = useState([]);
-    const [headerTitle, setHeaderTitle] = useState('WhatsApp');
+// Define types for your data structures
+type User = {
+    id: string;
+    email: string;
+    full_name: string;
+    created_at: string;
+    avatar?: string;
+    last_message?: string;
+    unread_count?: number;
+};
+
+type ChatListScreenProps = {
+    navigation: any; // Replace with your specific navigation type
+};
+
+const ChatListScreen: React.FC<ChatListScreenProps> = () => {
+    const navigation = useNavigation();
+    const [searchMode, setSearchMode] = useState<boolean>(false);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [selectedChats, setSelectedChats] = useState<string[]>([]);
+    const [headerTitle, setHeaderTitle] = useState<string>('WhatsApp');
     const scrollY = useRef(new Animated.Value(0)).current;
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState(null);
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [refreshing, setRefreshing] = useState<boolean>(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     const fetchUsers = async () => {
         try {
@@ -56,7 +71,7 @@ const ChatListScreen = () => {
             const filteredUsers = data.filter((u) => u.id !== user.id);
             setUsers(filteredUsers);
         } catch (err) {
-            console.error('Unexpected error:', err.message);
+            console.error('Unexpected error:', err);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -144,16 +159,16 @@ const ChatListScreen = () => {
                     <View style={styles.searchHeader}>
                         <TouchableOpacity onPress={toggleSearch}>
                             <Ionicons name="arrow-back" size={24} color="white" />
-                            </TouchableOpacity>
+                        </TouchableOpacity>
 
-            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Search..."
-                                placeholderTextColor="rgba(255,255,255,0.7)"
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                autoFocus
-                            />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search..."
+                            placeholderTextColor="rgba(255,255,255,0.7)"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            autoFocus
+                        />
 
                         <TouchableOpacity onPress={() => setSearchQuery('')}>
                             <MaterialIcons
@@ -175,7 +190,7 @@ const ChatListScreen = () => {
                                 <Ionicons name="search" size={20} color="white" />
                             </TouchableOpacity>
 
-                                    <TouchableOpacity style={styles.headerButton} >
+                            <TouchableOpacity style={styles.headerButton}>
                                 <Feather name="more-vertical" size={20} color="white" />
                             </TouchableOpacity>
                         </View>
@@ -221,7 +236,7 @@ const ChatListScreen = () => {
                     )
                 }
             />
-            <TouchableOpacity style={styles.fab}  >
+            <TouchableOpacity style={styles.fab}>
                 <Ionicons name="chatbubble" size={24} color="white" />
             </TouchableOpacity>
         </SafeAreaView>
@@ -320,7 +335,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: 'gray',
     },
-
 });
 
 export default ChatListScreen;

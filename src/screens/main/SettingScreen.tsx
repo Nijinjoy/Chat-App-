@@ -1,99 +1,65 @@
+import React, { useState } from 'react';
 import {
     View,
-    Text, 
-    StyleSheet, 
-    Switch, 
+    Text,
+    StyleSheet,
+    Switch,
     TouchableOpacity,
-    Image, 
     SafeAreaView,
     StatusBar,
     Platform,
     FlatList,
-    Alert
+    ListRenderItem,
 } from 'react-native';
-import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../services/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../services/supabase';
 import { signOut } from '../../services/authService';
-import useAuthStore from '../../store/authStore';
 
-const SettingScreen = () => {
+type SectionItem = {
+    id: string;
+    title?: string;
+    renderItem: () => React.ReactElement;
+};
+
+const SettingScreen: React.FC = () => {
     const navigation = useNavigation();
-    const { clearSessionData } = useAuthStore();
-    const [darkMode, setDarkMode] = useState(false);
-    const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [darkMode, setDarkMode] = useState<boolean>(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
 
-    const handleNotificationToggle = async (value) => {
+    const handleNotificationToggle = async (value: boolean) => {
         setNotificationsEnabled(value);
         await updatePushToken(value);
     };
 
     const handleSignOut = async () => {
-        Alert.alert(
-            'Confirm Logout',
-            'Are you sure you want to sign out?',
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Sign Out',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const signOutResponse = await signOut(); // Call the sign-out service
-                            if (!signOutResponse.success) {
-                                throw new Error(signOutResponse.error);
-                            }
-
-                            // Clear session data from Zustand store
-                            clearSessionData(); // Call Zustand method to clear session and user
-
-                            // Redirect to login screen
-                            navigation.replace('Auth', { screen: 'Login' });
-                        } catch (error) {
-                            console.error('Error signing out:', error.message);
-                            Alert.alert(
-                                'Error',
-                                error.message || 'Failed to sign out'
-                            );
-                        }
-                    },
-                },
-            ],
-            { cancelable: true }
-        );
+        try {
+            await signOut();
+            navigation.navigate('Login' as never);
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
     };
-
-
-
 
     const handleDeleteAccount = async () => {
-
+        console.warn('Delete account clicked');
     };
 
-    const sections = [
+    const updatePushToken = async (enabled: boolean) => {
+        console.log('Notifications toggled:', enabled);
+    };
+
+    const sections: SectionItem[] = [
         {
             id: 'preferences',
             title: 'Preferences',
             renderItem: () => (
-                <View style={[
-                    styles.section,
-                    darkMode && styles.darkSection
-                ]}>
-                    <Text style={[
-                        styles.sectionTitle,
-                        darkMode && styles.darkSectionTitle
-                    ]}>
+                <View style={[styles.section, darkMode && styles.darkSection]}>
+                    <Text style={[styles.sectionTitle, darkMode && styles.darkSectionTitle]}>
                         Preferences
                     </Text>
                     <View style={styles.settingItem}>
-                        <Text style={[
-                            styles.settingText,
-                            darkMode && styles.darkText
-                        ]}>
+                        <Text style={[styles.settingText, darkMode && styles.darkText]}>
                             Dark Mode
                         </Text>
                         <Switch
@@ -104,10 +70,7 @@ const SettingScreen = () => {
                         />
                     </View>
                     <View style={styles.settingItem}>
-                        <Text style={[
-                            styles.settingText,
-                            darkMode && styles.darkText
-                        ]}>
+                        <Text style={[styles.settingText, darkMode && styles.darkText]}>
                             Notifications
                         </Text>
                         <Switch
@@ -116,7 +79,6 @@ const SettingScreen = () => {
                             trackColor={{ false: '#767577', true: '#81b0ff' }}
                             thumbColor={notificationsEnabled ? '#f5dd4b' : '#f4f3f4'}
                         />
-
                     </View>
                 </View>
             )
@@ -126,26 +88,17 @@ const SettingScreen = () => {
             renderItem: () => (
                 <>
                     <TouchableOpacity
-                        style={[
-                            styles.signOutButton,
-                            darkMode && styles.darkSignOutButton
-                        ]}
+                        style={[styles.signOutButton, darkMode && styles.darkSignOutButton]}
                         onPress={handleSignOut}
                     >
                         <Text style={styles.signOutText}>Sign Out</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[
-                            styles.deleteAccountButton,
-                            darkMode && styles.darkDeleteAccountButton
-                        ]}
+                        style={[styles.deleteAccountButton, darkMode && styles.darkDeleteAccountButton]}
                         onPress={handleDeleteAccount}
                     >
-                        <Text style={[
-                            styles.deleteAccountText,
-                            darkMode && styles.darkDeleteAccountText
-                        ]}>
+                        <Text style={[styles.deleteAccountText, darkMode && styles.darkDeleteAccountText]}>
                             Delete Account
                         </Text>
                     </TouchableOpacity>
@@ -154,34 +107,20 @@ const SettingScreen = () => {
         }
     ];
 
+    const renderItem: ListRenderItem<SectionItem> = ({ item }) => item.renderItem();
+
     return (
         <>
             <StatusBar
                 barStyle={darkMode ? 'light-content' : 'dark-content'}
                 backgroundColor={darkMode ? '#075E54' : '#075E54'}
             />
-            <SafeAreaView style={[
-                styles.safeArea,
-                darkMode && styles.darkSafeArea
-            ]}>
-                <View style={[
-                    styles.header,
-                    darkMode && styles.darkHeader
-                ]}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons
-                            name="arrow-back"
-                            size={24}
-                            color={darkMode ? '#fff' : 'white'}
-                        />
+            <SafeAreaView style={[styles.safeArea, darkMode && styles.darkSafeArea]}>
+                <View style={[styles.header, darkMode && styles.darkHeader]}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <Ionicons name="arrow-back" size={24} color={darkMode ? '#fff' : 'white'} />
                     </TouchableOpacity>
-                    <Text style={[
-                        styles.headerTitle,
-                        darkMode && styles.darkHeaderTitle
-                    ]}>
+                    <Text style={[styles.headerTitle, darkMode && styles.darkHeaderTitle]}>
                         Settings
                     </Text>
                     <View style={styles.headerRight} />
@@ -190,7 +129,7 @@ const SettingScreen = () => {
                 <FlatList
                     data={sections}
                     keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => item.renderItem()}
+                    renderItem={renderItem}
                     contentContainerStyle={styles.listContainer}
                     showsVerticalScrollIndicator={false}
                 />
@@ -200,12 +139,6 @@ const SettingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#ffffff'
-    },
     safeArea: {
         flex: 1,
         backgroundColor: '#ffffff',
@@ -216,53 +149,6 @@ const styles = StyleSheet.create({
     listContainer: {
         padding: 20,
         paddingBottom: 40,
-    },
-    profileSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 30,
-    },
-    avatar: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        marginRight: 15,
-    },
-    avatarPlaceholder: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: '#4a90e2',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
-    },
-    darkAvatarPlaceholder: {
-        backgroundColor: '#6366f1',
-    },
-    avatarText: {
-        color: 'white',
-        fontSize: 24,
-        fontWeight: 'bold',
-    },
-    profileInfo: {
-        flex: 1,
-    },
-    name: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 5,
-        color: '#000',
-    },
-    darkText: {
-        color: '#fff',
-    },
-    email: {
-        fontSize: 14,
-        color: '#666',
-    },
-    darkSecondaryText: {
-        color: '#aaa',
     },
     section: {
         backgroundColor: '#ffffff',
@@ -300,16 +186,12 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
-    darkSettingItem: {
-        borderBottomColor: '#333',
-    },
     settingText: {
         fontSize: 16,
         color: '#000',
     },
-    arrow: {
-        fontSize: 20,
-        color: '#999',
+    darkText: {
+        color: '#fff',
     },
     signOutButton: {
         backgroundColor: '#ffffff',

@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import RootNavigator from './src/navigation';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, ViewStyle } from 'react-native';
+import {Provider} from 'react-redux'
+import store from './src/redux/store';
 
-
-export default function App() {
+export default function App(): JSX.Element {
   return (
     <GestureHandlerRootView style={styles.container}>
-        <RootNavigator />
+      <Provider store={store}>
+      <RootNavigator />
       <StatusBar style="auto" />
+      </Provider>
     </GestureHandlerRootView>
   );
 }
@@ -17,6 +20,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E1E2D'
-  },
+    backgroundColor: '#1E1E2D',
+  } as ViewStyle,
 });
