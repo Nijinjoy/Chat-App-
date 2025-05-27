@@ -19,7 +19,9 @@ import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
 import { LinearGradient } from 'expo-linear-gradient';
-import { registerUser } from '../../services/authService';
+import { AppDispatch } from '../../redux/store';
+import { registerUser } from '../../redux/auth/authThunk';
+import { useDispatch } from 'react-redux';
 
 const { width, height } = Dimensions.get('window');
 
@@ -58,6 +60,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const phoneInput = useRef<PhoneInput>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const dispatch = useDispatch<AppDispatch>();
 
   const handleChange = (name: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -91,17 +94,22 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   const handleRegister = async (): Promise<void> => {
     if (!validate()) return;
+  
+    setLoading(true);
     try {
-      setLoading(true);
-      const result = await registerUser(form, phoneNumber, setUser);
-      console.log('result ===>', result);
-      if (result?.warning) {
-        Alert.alert('Email Exists', result.warning);
-        navigation.navigate(AUTH_ROUTES.LOGIN);
-        return;
-      }
-      if (result?.error) {
-        Alert.alert('Registration Error', result.error);
+      const resultAction = await dispatch(
+        registerUser({
+          email: form.email,
+          password: form.password,
+          fullName: form.fullName,
+          phone: phoneNumber,
+        })
+      );
+      console.log('Register Response =>', resultAction);
+      if (registerUser.rejected.match(resultAction)) {
+        const errorMessage =
+          (resultAction.payload as string) || 'Registration failed';
+        Alert.alert('Registration Error', errorMessage);
         return;
       }
       Alert.alert(
@@ -118,7 +126,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     }
   };
   
-
+  
   const fields = [
     { name: 'fullName', placeholder: 'Full name', secure: false, icon: 'person-outline' },
     { name: 'email', placeholder: 'Email', secure: false, icon: 'mail-outline' },

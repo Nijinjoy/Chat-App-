@@ -1,7 +1,7 @@
-// Just type definitions. Should be authTypes.ts
+import { User } from '@supabase/supabase-js';
+
 export interface AuthState {
-    user: any;
-    isLoading: boolean;
-    error: string | null;
-  }
-  
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
+}

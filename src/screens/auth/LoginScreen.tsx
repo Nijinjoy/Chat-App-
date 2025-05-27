@@ -19,6 +19,9 @@ import InputComponent from '../../components/InputComponent';
 import ButtonComponent from '../../components/ButtonComponent';
 import { supabase } from '../../services/supabase';
 import { AUTH_ROUTES } from '../../navigation/AuthStack';
+import {  useDispatch } from 'react-redux';
+import { loginUser } from '../../redux/auth/authThunk';
+import { AppDispatch } from '../../redux/store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -41,10 +44,10 @@ type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'App'>;
 
 const LoginScreen: React.FC = () => {
     const navigation = useNavigation<NavigationProp>();
-
     const [form, setForm] = useState<FormFields>({ email: '', password: '' });
     const [errors, setErrors] = useState<Errors>({});
     const [showPassword, setShowPassword] = useState(false);
+    const dispatch = useDispatch<AppDispatch>();
 
     const handleChange = (name: keyof FormFields, value: string) => {
         setForm(prev => ({ ...prev, [name]: value }));
@@ -73,28 +76,20 @@ const LoginScreen: React.FC = () => {
 
     const handleLogin = async () => {
         if (!validate()) return;
-
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: form.email,
-                password: form.password,
-            });
-
-            if (error) {
-                Alert.alert('Login Failed', error.message || 'Invalid email or password');
-                return;
-            }
-
-            if (!data?.session) {
-                Alert.alert('Login Warning', 'Logged in but session not created.');
-                return;
-            }
-
+          const resultAction = await dispatch(loginUser({ email: form.email, password: form.password }));
+          console.log("resultActionlogin====>",resultAction);
+          
+          if (loginUser.fulfilled.match(resultAction)) {
             navigation.navigate('App');
+          } else {
+            // Login failed, show error message
+            Alert.alert('Login Failed', resultAction.payload || 'Invalid email or password');
+          }
         } catch (err: any) {
-            Alert.alert('Login Error', err.message || 'Something went wrong');
+          Alert.alert('Login Error', err.message || 'Something went wrong');
         }
-    };
+      };
 
     const fields = [
         { name: 'email', placeholder: 'Email', secure: false, icon: 'mail-outline' },

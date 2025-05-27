@@ -1,16 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
-import { useAuthStore } from '../store/authStore';
 
-// Define form type
 interface RegisterForm {
   email: string;
   password: string;
   fullName: string;
 }
 
-// Define result return type
 interface RegisterResult {
   data?: any;
   insertData?: any;
@@ -18,13 +15,17 @@ interface RegisterResult {
   error?: string;
 }
 
-// Use explicit type for registerUser
+interface SignOutResult {
+  success: boolean;
+  error?: string;
+}
+
 export const registerUser = async (
   form: RegisterForm,
-  phoneNumber: string,
-  setUser: (user: User) => void
+  phoneNumber: string
 ): Promise<RegisterResult> => {
   const { email, password, fullName } = form;
+
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -43,44 +44,39 @@ export const registerUser = async (
 
     if (data?.user?.identities?.length === 0) {
       return {
-        warning: 'User already exists. Please login instead.',
+        warning: 'User already exists. Please log in instead.',
       };
     }
 
-    const insertResponse = await supabase.from('users').upsert([
-      {
-        id: data.user.id,
-        full_name: fullName,
-        email,
-      },
-    ]);
+    const { error: insertError, data: insertData } = await supabase
+      .from('users')
+      .upsert([
+        {
+          id: data.user.id,
+          full_name: fullName,
+          email,
+        },
+      ]);
 
-    if (insertResponse.error) {
-      return { error: insertResponse.error.message };
+    if (insertError) {
+      return { error: insertError.message };
     }
-
-    setUser(data.user);
-    return { data, insertData: insertResponse.data };
+    return { data, insertData };
   } catch (err: any) {
-    console.error('Registration Error: ', err);
-    return { error: err.message || 'An unexpected error occurred.' };
+    console.error('[AuthService] Registration Error:', err);
+    return {
+      error: err.message || 'An unexpected error occurred during registration.',
+    };
   }
 };
-
-// Define signOut result type
-interface SignOutResult {
-  success: boolean;
-  error?: string;
-}
 
 export const signOut = async (): Promise<SignOutResult> => {
   try {
     console.log('[AuthService] Starting sign-out process');
-
     const { error: supabaseError } = await supabase.auth.signOut();
     if (supabaseError) {
       console.error('[AuthService] Supabase sign-out error:', supabaseError);
-      throw supabaseError;
+      return { success: false, error: supabaseError.message };
     }
 
     await AsyncStorage.multiRemove([

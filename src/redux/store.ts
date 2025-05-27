@@ -5,7 +5,6 @@ import authReducer from './auth/authSlice';
 const store = configureStore({
   reducer: {
     auth: authReducer,
-    // chat: chatReducer,
   },
 });
 

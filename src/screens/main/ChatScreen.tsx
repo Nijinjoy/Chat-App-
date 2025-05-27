@@ -1,415 +1,349 @@
-import React, { useCallback, useState, useRef, useEffect } from "react";
-import {
-    View,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    FlatList,
-    Text,
-    KeyboardAvoidingView,
-    Platform,
-    Image,
-    StatusBar,
-} from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, StyleSheet, StatusBar, Platform, Alert, TouchableOpacity } from "react-native";
+import { GiftedChat, Bubble, Send, Time, InputToolbar,Avatar } from "react-native-gifted-chat";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Feather, Ionicons, FontAwesome } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import HeaderComponent from "../../components/HeaderComponent";
 import { supabase } from "../../services/supabase";
-// import useAuthStore from "../../store/authStore";
-
-// Define types for your data structures
-type Message = {
-    id: string;
-    chat_id: string;
-    sender_id: string;
-    message: string;
-    created_at: string;
-    type?: string; // Optional because we'll add it in groupMessagesWithDateSeparators
-};
-
-type SeparatorItem = {
-    type: "separator";
-    id: string;
-    dateLabel: string;
-};
-
-type MessageItem = Message & {
-    type: "message";
-};
+import HeaderComponent from "../../components/HeaderComponent";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+// import * as DocumentPicker from "expo-document-picker";
 
 type ChatScreenParams = {
-    chatId: string;
-    chatName: string;
+  chatId: string;
+  chatName: string;
 };
 
-type ListItem = SeparatorItem | MessageItem;
-
 const ChatScreen = () => {
-    const navigation = useNavigation();
-    const route = useRoute();
-    const { chatId, chatName } = route.params as ChatScreenParams;
-    const [messageText, setMessageText] = useState<string>("");
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [avatar, setAvatar] = useState<string>('https://via.placeholder.com/120');
-    const [currentUser, setCurrentUser] = useState<any>(null); // Replace 'any' with your User type if available
-    const flatListRef = useRef<FlatList>(null);
-    // const { user } = useAuthStore();
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { chatId, chatName } = route.params as ChatScreenParams;
+  const [messages, setMessages] = useState([]);
+  const [avatar, setAvatar] = useState('https://via.placeholder.com/120');
+  const [currentUser, setCurrentUser] = useState(null);
 
-    const fetchMessages = async () => {
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('chat_id', chatId)
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            console.error('Error fetching messages:', error);
-            return;
-        }
-        setMessages(data || []);
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data?.user) {
+        console.error("User not found:", error);
+        return;
+      }
+      setCurrentUser(data.user);
+      setAvatar(data.user.user_metadata?.avatar || "https://via.placeholder.com/120");
     };
 
-    useEffect(() => {
-        const fetchUserProfile = async () => {
-            const { data, error } = await supabase.auth.getUser();
-            if (error || !data?.user) {
-                console.error("User not found:", error);
-                return;
-            }
-            setCurrentUser(data.user);
-            setAvatar(data.user.user_metadata?.avatar || "https://via.placeholder.com/120");
-        };
+    fetchUserProfile();
+    fetchMessages();
 
-        fetchUserProfile();
-        fetchMessages();
+    const channel = supabase
+      .channel(`realtime-messages-${chatId}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'messages' 
+      }, (payload) => {
+        const newMessage = payload.new;
+        if (newMessage.chat_id !== chatId) return;
 
-        const channel = supabase
-            .channel('chat-messages-channel')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `chat_id=eq.${chatId}`,
-                },
-                (payload) => {
-                    console.log('New message received:', payload.new);
-                    setMessages((prevMessages) => [...prevMessages, payload.new as Message]);
-                }
-            )
-            .subscribe();
+        setMessages(previousMessages => 
+          GiftedChat.append(previousMessages, [mapMessageToGiftedChat(newMessage)])
+        );
+      })
+      .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [chatId]);
-
-    const sendMessage = async () => {
-        if (!messageText.trim()) return;
-
-        if (!currentUser || !currentUser.id) {
-            console.error('❌ currentUser is null or invalid');
-            return;
-        }
-
-        const { data, error } = await supabase
-            .from('messages')
-            .insert([
-                {
-                    chat_id: chatId,
-                    sender_id: currentUser.id,
-                    message: messageText,
-                    created_at: new Date().toISOString(),
-                },
-            ])
-            .select();
-
-        if (error) {
-            console.error('Error sending message:', error.message);
-            return;
-        }
-
-        if (data) {
-            setMessages((prevMessages) => [...prevMessages, data[0] as Message]);
-            setMessageText('');
-        }
+    return () => {
+      supabase.removeChannel(channel);
     };
+  }, [chatId]);
 
-    const formatDateLabel = (dateString: string): string => {
-        const date = new Date(dateString);
-        const today = new Date();
-        const yesterday = new Date();
-        yesterday.setDate(today.getDate() - 1);
+  const fetchMessages = async () => {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: false });
 
-        const isToday =
-            date.getDate() === today.getDate() &&
-            date.getMonth() === today.getMonth() &&
-            date.getFullYear() === today.getFullYear();
+    if (error) {
+      console.error('Error fetching messages:', error);
+      return;
+    }
 
-        const isYesterday =
-            date.getDate() === yesterday.getDate() &&
-            date.getMonth() === yesterday.getMonth() &&
-            date.getFullYear() === yesterday.getFullYear();
+    const formattedMessages = data.map(mapMessageToGiftedChat);
+    setMessages(formattedMessages);
+  };
 
-        if (isToday) return "Today";
-        if (isYesterday) return "Yesterday";
+  const mapMessageToGiftedChat = (message) => ({
+    _id: message.id,
+    text: message.message,
+    createdAt: new Date(message.created_at),
+    user: {
+      _id: message.sender_id,
+      name: message.sender_id === currentUser?.id ? 'You' : chatName,
+      avatar: message.sender_id === currentUser?.id ? avatar : 'https://via.placeholder.com/120',
+    },
+  });
 
-        return date.toLocaleDateString();
-    };
+  const onSend = useCallback(async (messages = []) => {
+    if (!currentUser?.id) {
+      console.error('Current user not available');
+      return;
+    }
 
-    const groupMessagesWithDateSeparators = (): ListItem[] => {
-        const result: ListItem[] = [];
-        let lastDate: string | null = null;
+    const newMessage = messages[0];
+    
+    const { error } = await supabase
+      .from('messages')
+      .insert([
+        {
+          chat_id: chatId,
+          sender_id: currentUser.id,
+          message: newMessage.text,
+          created_at: newMessage.createdAt.toISOString(),
+        },
+      ]);
 
-        messages.forEach((message, index) => {
-            const msgDate = new Date(message.created_at).toDateString();
-            if (msgDate !== lastDate) {
-                result.push({
-                    type: "separator",
-                    id: `separator-${index}`,
-                    dateLabel: formatDateLabel(message.created_at),
-                });
-                lastDate = msgDate;
-            }
-            result.push({ ...message, type: "message" });
+    if (error) {
+      console.error('Error sending message:', error);
+      return;
+    }
+    setMessages(previousMessages => GiftedChat.append(previousMessages, messages));
+  }, [chatId, currentUser]);
+
+  const renderBubble = (props) => (
+    <Bubble
+      {...props}
+      wrapperStyle={{
+        left: {
+          backgroundColor: '#ffffff',
+          marginBottom: 8,
+          borderRadius: 12,
+          borderBottomLeftRadius: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 1,
+        },
+        right: {
+          backgroundColor: '#0084ff',
+          marginBottom: 8,
+          borderRadius: 12,
+          borderBottomRightRadius: 0,
+        },
+      }}
+      textStyle={{
+        left: {
+          color: '#000',
+          fontSize: 16,
+        },
+        right: {
+          color: '#fff',
+          fontSize: 16,
+        },
+      }}
+    />
+  );
+
+  const renderSend = (props) => (
+    <Send {...props} containerStyle={{ justifyContent: 'center', marginRight: 8 }}>
+      <View style={styles.sendButton}>
+        <Ionicons name="send" size={20} color="white" />
+      </View>
+    </Send>
+  );
+
+  const renderTime = (props) => (
+    <Time
+      {...props}
+      timeTextStyle={{
+        left: {
+          color: '#aaa',
+          fontSize: 12,
+        },
+        right: {
+          color: '#ddd',
+          fontSize: 12,
+        },
+      }}
+    />
+  );
+
+//   const renderInputToolbar = (props) => (
+//     <InputToolbar
+//       {...props}
+//       containerStyle={styles.inputToolbar}
+//       primaryStyle={styles.inputPrimary}
+//       accessoryStyle={styles.accessoryStyle}
+//     />
+//   );
+
+const renderInputToolbar = (props) => (
+    <View>
+      <InputToolbar
+        {...props}
+        containerStyle={styles.inputToolbar}
+        primaryStyle={styles.inputPrimary}
+      />
+      <View style={styles.uploadOptions}>
+        <TouchableOpacity onPress={() => handleUploadFile("image")}>
+          <Feather name="image" size={22} color="#0084ff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleUploadFile("video")}>
+          <Feather name="video" size={22} color="#0084ff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleUploadFile("pdf")}>
+          <FontAwesome name="file-pdf-o" size={22} color="#d00" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const handleUploadFile = async (type: "image" | "video" | "pdf") => {
+    try {
+      let result;
+      if (type === "pdf") {
+        result = await DocumentPicker.getDocumentAsync({
+          type: "application/pdf",
+        });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes:
+            type === "video"
+              ? ImagePicker.MediaTypeOptions.Videos
+              : ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: false,
+          quality: 0.7,
+        });
+      }
+
+      if (result.canceled || result.assets?.length === 0) return;
+
+      const fileUri = result.assets?.[0]?.uri || result.uri;
+      const fileName = fileUri.split("/").pop();
+      const fileExt = fileName?.split(".").pop() || "bin";
+      const fileType =
+        type === "pdf" ? "application/pdf" : `${type}/*`;
+
+      const file = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const { data, error } = await supabase.storage
+        .from("chat-uploads")
+        .upload(`uploads/${Date.now()}-${fileName}`, Buffer.from(file, "base64"), {
+          contentType: fileType,
+          upsert: true,
         });
 
-        return result;
-    };
+      if (error) {
+        Alert.alert("Upload Failed", error.message);
+        return;
+      }
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar backgroundColor='#075E54' barStyle="light-content" translucent />
-            <HeaderComponent
-                chatName={chatName}
-                avatar={avatar}
-                status="online"
-                showAvatar
-                showBack
-                showIcons
-            />
-            <KeyboardAvoidingView
-                style={styles.screen}
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
-                keyboardVerticalOffset={80}
-            >
-                <FlatList
-                    ref={flatListRef}
-                    data={groupMessagesWithDateSeparators()}
-                    keyExtractor={(item, index) => item?.id?.toString() || `key-${index}`}
-                    contentContainerStyle={{ padding: 10 }}
-                    renderItem={({ item }) => {
-                        if (item.type === "separator") {
-                            return (
-                                <View style={styles.dateSeparatorContainer}>
-                                    <Text style={styles.dateSeparatorText}>{item.dateLabel}</Text>
-                                </View>
-                            );
-                        }
+      const url = supabase.storage
+        .from("chat-uploads")
+        .getPublicUrl(data.path).data.publicUrl;
 
-                        const isCurrentUser = item.sender_id === currentUser?.id;
+      await supabase.from("messages").insert([
+        {
+          chat_id: chatId,
+          sender_id: currentUser.id,
+          message: `${type.toUpperCase()} file: ${url}`,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      console.error("Upload error:", error);
+    }
+  };
 
-                        return (
-                            <View
-                                style={{
-                                    flexDirection: "row",
-                                    justifyContent: isCurrentUser ? "flex-end" : "flex-start",
-                                    marginBottom: 10,
-                                }}
-                            >
-                                <View
-                                    style={{
-                                        maxWidth: "75%",
-                                        padding: 12,
-                                        backgroundColor: isCurrentUser ? "#dcf8c6" : "#ffffff",
-                                        borderRadius: 16,
-                                        borderTopRightRadius: isCurrentUser ? 0 : 16,
-                                        borderTopLeftRadius: isCurrentUser ? 16 : 0,
-                                        borderBottomLeftRadius: 16,
-                                        borderBottomRightRadius: 16,
-                                        shadowColor: "#000",
-                                        shadowOpacity: 0.05,
-                                        shadowRadius: 2,
-                                        shadowOffset: { width: 0, height: 1 },
-                                        elevation: 1,
-                                    }}
-                                >
-                                    <Text style={{ fontSize: 16, color: "#333" }}>{item.message}</Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 10,
-                                            color: "gray",
-                                            textAlign: "right",
-                                            marginTop: 4,
-                                        }}
-                                    >
-                                        {new Date(item.created_at).toLocaleTimeString([], {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                        })}
-                                    </Text>
-                                </View>
-                            </View>
-                        );
-                    }}
-                />
+  
 
-                <View style={styles.inputContainer}>
-                    <TouchableOpacity style={styles.iconButton}>
-                        <Feather name="plus" size={24} color="gray" />
-                    </TouchableOpacity>
-                    <TextInput
-                        style={styles.textbox}
-                        value={messageText}
-                        placeholder="Type your message"
-                        onChangeText={setMessageText}
-                        onSubmitEditing={sendMessage}
-                    />
-                    {messageText === "" ? (
-                        <TouchableOpacity style={styles.iconButton}>
-                            <MaterialIcons name="camera-alt" size={24} color="gray" />
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity
-                            style={[styles.iconButton, styles.sendButton]}
-                            onPress={sendMessage}
-                        >
-                            <Feather name="send" size={20} color="white" />
-                        </TouchableOpacity>
-                    )}
-                </View>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    );
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor='#075E54' barStyle="light-content" translucent />
+      <HeaderComponent
+        chatName={chatName}
+        avatar={avatar}
+        status="online"
+        showAvatar
+        showBack
+        showIcons
+      />
+      <GiftedChat
+        messages={messages}
+        onSend={messages => onSend(messages)}
+        user={{
+          _id: currentUser?.id || '0',
+          name: 'You',
+          avatar: avatar,
+        }}
+        renderBubble={renderBubble}
+        renderSend={renderSend}
+        renderTime={renderTime}
+        renderInputToolbar={renderInputToolbar}
+        alwaysShowSend
+        scrollToBottom
+        scrollToBottomComponent={() => (
+          <MaterialIcons name="keyboard-arrow-down" size={24} color="#0084ff" />
+        )}
+        placeholder="Type a message..."
+        textInputStyle={styles.textInput}
+        alignTop
+        keyboardShouldPersistTaps="never"
+        bottomOffset={Platform.OS === 'ios' ? 64 : 0}
+        minInputToolbarHeight={64}
+      />
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#e5ddd5",
-    },
-    screen: {
-        flex: 1,
-    },
-    chatList: {
-        padding: 10,
-        paddingBottom: 20,
-    },
-    messageContainer: {
-        marginVertical: 4,
-    },
-    sentContainer: {
-        alignItems: "flex-end",
-    },
-    receivedContainer: {
-        alignItems: "flex-start",
-    },
-    messageBubble: {
-        maxWidth: "80%",
-        padding: 10,
-        borderRadius: 12,
-        elevation: 2,
-        marginBottom: 2,
-    },
-    sentBubble: {
-        backgroundColor: "#dcf8c6",
-        borderTopRightRadius: 0,
-    },
-    receivedBubble: {
-        backgroundColor: "#fff",
-        borderTopLeftRadius: 0,
-    },
-    messageText: {
-        fontSize: 16,
-        color: "#000",
-    },
-    timestamp: {
-        fontSize: 11,
-        color: "#555",
-        alignSelf: "flex-end",
-        marginTop: 5,
-    },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 10,
-        backgroundColor: "white",
-        borderTopWidth: 0.5,
-        borderColor: "#ccc",
-        elevation: 10,
-    },
-    textbox: {
-        flex: 1,
-        height: 40,
-        borderWidth: 0.5,
-        borderColor: "#ccc",
-        borderRadius: 20,
-        marginHorizontal: 10,
-        paddingHorizontal: 15,
-        fontSize: 16,
-        backgroundColor: "#f9f9f9",
-    },
-    iconButton: {
-        alignItems: "center",
-        justifyContent: "center",
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-    },
-    sendButton: {
-        backgroundColor: "#25D366",
-    },
-    header: {
-        backgroundColor: '#075E54',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 15,
-        paddingTop: Platform.OS === 'android' ? 20 : 10,
-    },
-    headerContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    headerAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginHorizontal: 15,
-    },
-    headerText: {
-        flexDirection: 'column',
-    },
-    headerName: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 18,
-    },
-    headerStatus: {
-        color: 'lightgray',
-        fontSize: 12,
-    },
-    headerIcons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    icon: {
-        marginRight: 20,
-    },
-    dateSeparatorContainer: {
-        alignSelf: "center",
-        backgroundColor: "#e0e0e0",
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginVertical: 10,
-    },
-    dateSeparatorText: {
-        fontSize: 12,
-        color: "#555",
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  sendButton: {
+    backgroundColor: '#0084ff',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    marginRight: 4,
+  },
+  inputToolbar: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e5e5',
+    padding: 8,
+    paddingBottom: 12,
+  },
+  inputPrimary: {
+    alignItems: 'center',
+    minHeight: 44,
+  },
+  accessoryStyle: {
+    height: 44,
+  },
+  textInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 16,
+    marginRight: 8,
+    flex: 1,
+  },
+  uploadOptions: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
 });
 
 export default ChatScreen;

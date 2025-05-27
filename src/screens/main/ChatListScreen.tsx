@@ -15,9 +15,9 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { APP_ROUTES } from '../../navigation/AppStack';
 import { supabase } from '../../services/supabase';
 import ChatItem from '../../components/ChatItem';
+import { APP_ROUTES } from '../../navigation/AppStack';
 
 // Define types for your data structures
 type User = {
@@ -107,20 +107,11 @@ const ChatListScreen: React.FC<ChatListScreenProps> = () => {
     };
 
     const handleChatPress = (user: User) => {
-        if (selectedChats.length > 0) {
-            setSelectedChats(prev =>
-                prev.includes(user.id)
-                    ? prev.filter(id => id !== user.id)
-                    : [...prev, user.id]
-            );
-        } else {
-            navigation.navigate(APP_ROUTES.CHAT_DETAIL, {
-                chatId: user.id,
-                chatName: user.full_name,  
-                avatar: user.avatar || 'default-avatar-url'
-            });
-        }
-    };
+        navigation.navigate(APP_ROUTES.CHATS, {
+          screen: 'ChatDetail',
+          params: { chatId: user.id },
+        });
+      };   
 
     return (
         <SafeAreaView style={styles.container}>

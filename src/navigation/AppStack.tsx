@@ -1,11 +1,11 @@
 import React from 'react';
-import { createBottomTabNavigator, BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { createStackNavigator, StackScreenProps } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import ChatListScreen from '../screens/main/ChatListScreen';
 import ChatScreen from '../screens/main/ChatScreen';
 import SettingsScreen from '../screens/main/SettingScreen';
-import { getFocusedRouteNameFromRoute, RouteProp } from '@react-navigation/native';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import ContactScreen from '../screens/main/ContactScreen';
 
 export const APP_ROUTES = {
@@ -17,7 +17,7 @@ export const APP_ROUTES = {
 
 type ChatStackParamList = {
   ChatList: undefined;
-  ChatDetail: { chatId: string }; 
+  ChatDetail: { chatId: string };
 };
 
 type TabParamList = {
@@ -29,17 +29,20 @@ type TabParamList = {
 const ChatStack = createStackNavigator<ChatStackParamList>();
 
 const ChatStackScreen = () => (
-  <ChatStack.Navigator screenOptions={{ headerShown: false }}>
+  <ChatStack.Navigator
+    screenOptions={{
+      headerShown: false,
+      cardStyle: { backgroundColor: '#fff' }, // <-- Prevent flicker by setting stack background color
+    }}
+  >
     <ChatStack.Screen
       name="ChatList"
       component={ChatListScreen}
-      options={{ tabBarVisible: true }}
     />
     <ChatStack.Screen
       name="ChatDetail"
       component={ChatScreen}
       options={{
-        tabBarStyle: { display: 'none' },
         headerShown: false,
       }}
     />
@@ -80,14 +83,11 @@ export default function AppStack() {
         ),
         tabBarActiveTintColor: 'blue',
         tabBarInactiveTintColor: 'gray',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          paddingBottom: 2,
-        },
         tabBarStyle: {
           height: 60,
           paddingBottom: 0,
           paddingTop: 8,
+          backgroundColor: '#ffffff',
           borderTopWidth: 0,
           elevation: 10,
           shadowColor: '#000',
@@ -103,20 +103,22 @@ export default function AppStack() {
         options={({ route }) => {
           const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatList';
           const isChatList = routeName === 'ChatList';
+
           return {
-            title: 'Chats',
-            tabBarStyle: {
-              display: isChatList ? 'flex' : 'none',
-              height: 60,
-              paddingTop: 8,
-              paddingBottom: 0,
-              backgroundColor: '#ffffff',
-              borderTopWidth: 0,
-              elevation: 10,
-              shadowColor: '#000',
-              shadowOpacity: 0.1,
-              shadowOffset: { width: 0, height: -1 },
-            },
+            // Keep tabBarStyle consistent to avoid layout flickering
+            tabBarStyle: isChatList
+              ? {
+                  height: 60,
+                  paddingBottom: 0,
+                  paddingTop: 8,
+                  backgroundColor: '#ffffff',
+                  borderTopWidth: 0,
+                  elevation: 10,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.1,
+                  shadowOffset: { width: 0, height: -1 },
+                }
+              : { display: 'none' },
           };
         }}
       />

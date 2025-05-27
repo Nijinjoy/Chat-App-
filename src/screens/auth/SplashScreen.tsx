@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { chatAnimation, loadingDots } from '../../assets/animations';
 import { supabase } from '../../services/supabase';
+import { UseSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
 
 type RootStackParamList = {
   App: undefined;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
     View,
     Text,
@@ -15,6 +15,11 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../services/supabase';
 import { signOut } from '../../services/authService';
+import {useDispatch,useSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
+import { fetchCurrentUser } from '../../redux/auth/authThunk';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setUser } from '../../redux/auth/authSlice';
 
 type SectionItem = {
     id: string;
@@ -26,6 +31,19 @@ const SettingScreen: React.FC = () => {
     const navigation = useNavigation();
     const [darkMode, setDarkMode] = useState<boolean>(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
+    const dispatch = useDispatch();
+// const user = useSelector((state: RootState) => state.auth.user);
+const [user, setUser] = useState<any>(null);
+
+
+useEffect(() => {
+    const getUser = async () => {
+        const json = await AsyncStorage.getItem('user');
+        if (json) setUser(JSON.parse(json));
+    };
+    getUser();
+}, []);
+
 
     const handleNotificationToggle = async (value: boolean) => {
         setNotificationsEnabled(value);
@@ -83,6 +101,27 @@ const SettingScreen: React.FC = () => {
                 </View>
             )
         },
+        {
+            id: 'user-info',
+            renderItem: () => (
+                <View style={[styles.section, darkMode && styles.darkSection]}>
+                    <Text style={[styles.sectionTitle, darkMode && styles.darkSectionTitle]}>
+                        Account Info
+                    </Text>
+                    <View style={styles.settingItem}>
+                        <Text style={[styles.settingText, darkMode && styles.darkText]}>
+                            Email: {user?.email || 'N/A'}
+                        </Text>
+                    </View>
+                    <View style={styles.settingItem}>
+                        <Text style={[styles.settingText, darkMode && styles.darkText]}>
+                            User ID: {user?.id || 'N/A'}
+                        </Text>
+                    </View>
+                </View>
+            )
+        }
+,        
         {
             id: 'actions',
             renderItem: () => (
