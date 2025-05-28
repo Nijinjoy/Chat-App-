@@ -1,331 +1,214 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    TextInput,
-    FlatList,
-    TouchableOpacity,
-    SafeAreaView,
-    Animated,
-    StyleSheet,
-    StatusBar,
-    Platform,
-    RefreshControl,
-    ActivityIndicator
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  SafeAreaView,
+  Animated,
+  StyleSheet,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../../services/supabase';
-import ChatItem from '../../components/ChatItem';
-import { APP_ROUTES } from '../../navigation/AppStack';
 
-// Define types for your data structures
-type User = {
-    id: string;
-    email: string;
-    full_name: string;
-    created_at: string;
-    avatar?: string;
-    last_message?: string;
-    unread_count?: number;
-};
+const dummyChats = [
+  {
+    id: '1',
+    name: 'Alice Johnson',
+    avatar: '',
+    lastMessage: 'Hey, how are you?',
+    time: '10:45 AM',
+    unreadCount: 2,
+  },
+  {
+    id: '2',
+    name: 'Bob Smith',
+    avatar: '',
+    lastMessage: 'Let’s catch up later!',
+    time: '09:30 AM',
+    unreadCount: 0,
+  },
+  {
+    id: '3',
+    name: 'Catherine Adams',
+    avatar: '',
+    lastMessage: 'Thanks for the update.',
+    time: 'Yesterday',
+    unreadCount: 1,
+  },
+];
 
-type ChatListScreenProps = {
-    navigation: any; // Replace with your specific navigation type
-};
+const ChatItem = ({ chat, onPress }) => (
+  <TouchableOpacity style={styles.chatItem} onPress={onPress}>
+    <View style={styles.avatarPlaceholder}>
+      <Text style={styles.avatarText}>{chat.name[0]}</Text>
+    </View>
+    <View style={styles.chatContent}>
+      <View style={styles.chatHeader}>
+        <Text style={styles.chatName}>{chat.name}</Text>
+        <Text style={styles.chatTime}>{chat.time}</Text>
+      </View>
+      <View style={styles.chatFooter}>
+        <Text style={styles.chatMessage} numberOfLines={1}>
+          {chat.lastMessage}
+        </Text>
+        {chat.unreadCount > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadText}>{chat.unreadCount}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  </TouchableOpacity>
+);
 
-const ChatListScreen: React.FC<ChatListScreenProps> = () => {
-    const navigation = useNavigation();
-    const [searchMode, setSearchMode] = useState<boolean>(false);
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const [selectedChats, setSelectedChats] = useState<string[]>([]);
-    const [headerTitle, setHeaderTitle] = useState<string>('WhatsApp');
-    const scrollY = useRef(new Animated.Value(0)).current;
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [refreshing, setRefreshing] = useState<boolean>(false);
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+const ChatListScreen = () => {
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            const {
-                data: { user },
-                error: userError
-            } = await supabase.auth.getUser();
-
-            if (userError) {
-                console.error('Failed to get logged in user:', userError.message);
-                return;
-            }
-            setCurrentUserId(user.id);
-            const { data, error } = await supabase
-                .from('users')
-                .select('id, email, full_name, created_at')
-                .order('full_name', { ascending: true });
-
-            if (error) {
-                console.error('Error fetching users:', error.message);
-                return;
-            }
-            const filteredUsers = data.filter((u) => u.id !== user.id);
-            setUsers(filteredUsers);
-        } catch (err) {
-            console.error('Unexpected error:', err);
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);      
-
-    const toggleSearch = () => {
-        setSearchMode(!searchMode);
-        if (!searchMode) {
-            setSearchQuery('');
-            setSelectedChats([]);
-        }
-    };
-
-    const headerHeight = scrollY.interpolate({
-        inputRange: [0, 50],
-        outputRange: [100, 60],
-        extrapolate: 'clamp',
-    });
-
-    const headerOpacity = scrollY.interpolate({
-        inputRange: [0, 30],
-        outputRange: [1, 0.9],
-        extrapolate: 'clamp',
-    });
-
-    const exitSelectionMode = () => {
-        setSelectedChats([]);
-    };
-
-    const handleChatPress = (user: User) => {
-        navigation.navigate(APP_ROUTES.CHATS, {
-          screen: 'ChatDetail',
-          params: { chatId: user.id },
-        });
-      };   
-
-    return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar backgroundColor="#075E54" barStyle="light-content" />
-            <Animated.View style={[
-                styles.header,
-                {
-                    height: headerHeight,
-                    opacity: headerOpacity,
-                    backgroundColor: selectedChats.length > 0 ? '#075E54' : '#075E54',
-                }
-            ]}>
-                {selectedChats.length > 0 ? (
-                    <View style={styles.selectionHeader}>
-                        <TouchableOpacity onPress={exitSelectionMode}>
-                            <Ionicons name="arrow-back" size={24} color="white" />
-                        </TouchableOpacity>
-
-                        <Text style={styles.selectionCount}>
-                            {selectedChats.length}
-                        </Text>
-
-                        <View style={styles.selectionActions}>
-                            <TouchableOpacity style={styles.headerButton}>
-                                <Feather name="archive" size={20} color="white" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.headerButton}>
-                                <MaterialIcons name="delete" size={20} color="white" />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.headerButton}>
-                                <Feather name="more-vertical" size={20} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ) : searchMode ? (
-                    <View style={styles.searchHeader}>
-                        <TouchableOpacity onPress={toggleSearch}>
-                            <Ionicons name="arrow-back" size={24} color="white" />
-                        </TouchableOpacity>
-
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search..."
-                            placeholderTextColor="rgba(255,255,255,0.7)"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            autoFocus
-                        />
-
-                        <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <MaterialIcons
-                                name="close"
-                                size={20}
-                                color={searchQuery ? 'white' : 'transparent'}
-                            />
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <View style={styles.defaultHeader}>
-                        <Text style={styles.headerTitle}>{headerTitle}</Text>
-                        <View style={styles.headerActions}>
-                            <TouchableOpacity style={styles.headerButton}>
-                                <Ionicons name="camera-outline" size={22} color="white" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.headerButton} onPress={toggleSearch}>
-                                <Ionicons name="search" size={20} color="white" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.headerButton}>
-                                <Feather name="more-vertical" size={20} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-            </Animated.View>
-            <FlatList
-                data={users}
-                keyExtractor={(item) => item.id}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={fetchUsers} />
-                }
-                renderItem={({ item }) => {
-                    const formattedTime = item.created_at
-                        ? new Date(item.created_at).toLocaleString('en-IN', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                        })
-                        : 'Just now';
-
-                    return (
-                        <ChatItem
-                            chat={{
-                                avatar: item.avatar || 'default-avatar-url',
-                                name: item.full_name,
-                                lastMessage: item.last_message || 'No message yet',
-                                time: formattedTime,
-                                unreadCount: item.unread_count || 0,
-                            }}
-                            onPress={() => handleChatPress(item)}
-                        />
-                    );
-                }}
-                ListEmptyComponent={
-                    loading ? (
-                        <ActivityIndicator size="large" color="#075E54" />
-                    ) : (
-                        <Text style={{ textAlign: 'center', marginTop: 20 }}>No users found</Text>
-                    )
-                }
-            />
-            <TouchableOpacity style={styles.fab}>
-                <Ionicons name="chatbubble" size={24} color="white" />
-            </TouchableOpacity>
-        </SafeAreaView>
+    const filteredChats = dummyChats.filter(chat =>
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-};
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    header: {
-        backgroundColor: '#075E54',
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-        paddingHorizontal: 15,
-        justifyContent: 'center',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-    },
-    defaultHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    searchHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 5,
-    },
-    selectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    headerTitle: {
-        color: 'white',
-        fontSize: 22,
-        fontWeight: 'bold',
-    },
-    headerActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    headerButton: {
-        marginLeft: 20,
-    },
-    searchInput: {
-        flex: 1,
-        color: 'white',
-        fontSize: 18,
-        marginLeft: 10,
-        paddingVertical: 5,
-    },
-    selectionCount: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: 20,
-    },
-    selectionActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    chatList: {
-        paddingBottom: 20,
-    },
-    fab: {
-        position: 'absolute',
-        bottom: 25,
-        right: 25,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#25D366',
-        justifyContent: 'center',
-        alignItems: 'center',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
-    },
-    userItem: {
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    userName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    userEmail: {
-        fontSize: 14,
-        color: 'gray',
-    },
-});
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="grey" barStyle="light-content" />
+  
+      <View style={styles.headerWrapper}>
+        <Text style={styles.headerTitle}>Messages</Text>
+        <View style={styles.searchContainer}>
+          <Feather name="search" size={18} color="#888" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name"
+            placeholderTextColor="#888"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+  
+      <FlatList
+        data={filteredChats}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ChatItem chat={item} onPress={() => console.log('Chat pressed:', item.name)} />
+        )}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#fff' }}>No chats found</Text>
+        }
+      />
+
+      <TouchableOpacity style={styles.fab}>
+        <Ionicons name="chatbubble" size={24} color="white" />
+      </TouchableOpacity>
+    </SafeAreaView>
+  );
+  
+};
 
 export default ChatListScreen;
+
+const styles = StyleSheet.create({
+  chatItem: {
+    flexDirection: 'row',
+    padding: 15,
+    borderBottomColor: '#eee',
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#075E54',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  chatContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  chatName: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#ffffff', 
+  },
+  chatTime: {
+    fontSize: 12,
+    color: 'gray',
+  },
+  chatFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chatMessage: {
+    color: 'gray',
+    flex: 1,
+  },
+  unreadBadge: {
+    backgroundColor: '#25D366',
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  unreadText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 30,
+    backgroundColor: '#25D366',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#121212',
+  },
+  headerWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 20,
+    paddingBottom: 15,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff', 
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1f1f1f',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 13,
+    marginTop: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+  },
+});

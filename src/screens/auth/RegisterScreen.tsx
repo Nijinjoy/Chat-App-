@@ -102,7 +102,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           email: form.email,
           password: form.password,
           fullName: form.fullName,
-          phone: phoneNumber,
+          // phone: phoneNumber,
         })
       );
       console.log('Register Response =>', resultAction);
@@ -116,7 +116,8 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         'Verify Email',
         'A confirmation email has been sent. Please check your inbox.'
       );
-      navigation.navigate(AUTH_ROUTES.LOGIN);
+      // navigation.navigate(AUTH_ROUTES.LOGIN);
+      // navigation.navigate('NotificationScreen');
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : 'Something went wrong';

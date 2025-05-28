@@ -14,7 +14,6 @@ export const AUTH_ROUTES = {
   VERIFY_PHONE: 'VerifyPhone',
 } as const;
 
-// Define the param list for the auth stack
 export type AuthStackParamList = {
   Splash: undefined;
   Welcome: undefined;
@@ -32,7 +31,6 @@ const defaultScreenOptions = {
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-// Type the props: route param contains optional initialRoute param
 type AuthStackProps = {
   route?: {
     params?: {

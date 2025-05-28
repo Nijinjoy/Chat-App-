@@ -33,7 +33,7 @@ export const registerUser = async (
       options: {
         data: {
           full_name: fullName,
-          phone: phoneNumber,
+          // phone: phoneNumber,
         },
       },
     });

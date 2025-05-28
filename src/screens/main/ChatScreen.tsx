@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, StatusBar, Platform, Alert, TouchableOpacity } from "react-native";
+import { View, StyleSheet, StatusBar, Platform, Alert, TouchableOpacity, Text } from "react-native";
 import { GiftedChat, Bubble, Send, Time, InputToolbar,Avatar } from "react-native-gifted-chat";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons, Feather, Ionicons, FontAwesome } from "@expo/vector-icons";
@@ -8,7 +8,6 @@ import { supabase } from "../../services/supabase";
 import HeaderComponent from "../../components/HeaderComponent";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-// import * as DocumentPicker from "expo-document-picker";
 
 type ChatScreenParams = {
   chatId: string;
@@ -169,15 +168,6 @@ const ChatScreen = () => {
       }}
     />
   );
-
-//   const renderInputToolbar = (props) => (
-//     <InputToolbar
-//       {...props}
-//       containerStyle={styles.inputToolbar}
-//       primaryStyle={styles.inputPrimary}
-//       accessoryStyle={styles.accessoryStyle}
-//     />
-//   );
 
 const renderInputToolbar = (props) => (
     <View>

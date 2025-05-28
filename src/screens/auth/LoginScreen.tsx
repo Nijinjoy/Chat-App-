@@ -22,6 +22,7 @@ import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import {  useDispatch } from 'react-redux';
 import { loginUser } from '../../redux/auth/authThunk';
 import { AppDispatch } from '../../redux/store';
+import { APP_ROUTES } from '../../navigation/AppStack';
 
 const { width, height } = Dimensions.get('window');
 
@@ -81,7 +82,12 @@ const LoginScreen: React.FC = () => {
           console.log("resultActionlogin====>",resultAction);
           
           if (loginUser.fulfilled.match(resultAction)) {
-            navigation.navigate('App');
+            // navigation.navigate('App');
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'App' }], // Your RootStack has 'App' which loads this AppStack
+              });
+                           
           } else {
             // Login failed, show error message
             Alert.alert('Login Failed', resultAction.payload || 'Invalid email or password');
