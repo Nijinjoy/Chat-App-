@@ -1,7 +1,6 @@
-// navigation/AppStack.tsx
-
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
@@ -9,7 +8,7 @@ import ChatListScreen from '../screens/main/ChatListScreen';
 import ChatScreen from '../screens/main/ChatScreen';
 import SettingsScreen from '../screens/main/SettingScreen';
 import ContactScreen from '../screens/main/ContactScreen';
-import NotificationScreen from '../screens/main/NotificationScreen'; // Import your notification screen
+import NotificationScreen from '../screens/main/NotificationScreen'; 
 
 export const APP_ROUTES = {
   CHATS: 'Chats',
@@ -41,7 +40,7 @@ const ChatStackScreen = () => (
   </ChatStack.Navigator>
 );
 
-const Tab = createBottomTabNavigator();
+const Tab = createMaterialTopTabNavigator();
 
 const TabBarIcon = ({ routeName, focused, color, size }: any) => {
   const iconMap: Record<TabRoutes, string> = {
@@ -55,24 +54,27 @@ const TabBarIcon = ({ routeName, focused, color, size }: any) => {
 const BottomTabs = () => (
   <Tab.Navigator
     initialRouteName={APP_ROUTES.CHATS}
+    tabBarPosition="bottom" 
     screenOptions={({ route }) => ({
-      tabBarIcon: ({ focused, color, size }) => (
-        <TabBarIcon routeName={route.name as TabRoutes} focused={focused} color={color} size={size} />
+      tabBarIcon: ({ focused, color }) => (
+        <TabBarIcon
+          routeName={route.name as TabRoutes}
+          focused={focused}
+          color={color}
+          size={24}
+        />
       ),
+      swipeEnabled: true,
+      tabBarShowIcon: true,
       tabBarActiveTintColor: 'blue',
       tabBarInactiveTintColor: 'gray',
+      tabBarIndicatorStyle: {  height: 0, },
       tabBarStyle: {
         height: 60,
-        paddingBottom: 0,
-        paddingTop: 8,
         backgroundColor: '#ffffff',
-        borderTopWidth: 0,
         elevation: 10,
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowOffset: { width: 0, height: -1 },
       },
-      headerShown: false,
+      tabBarLabelStyle: { display: 'none' },
     })}
   >
     <Tab.Screen
@@ -86,14 +88,9 @@ const BottomTabs = () => (
           tabBarStyle: isChatList
             ? {
                 height: 60,
-                paddingBottom: 0,
-                paddingTop: 8,
                 backgroundColor: '#ffffff',
                 borderTopWidth: 0,
                 elevation: 10,
-                shadowColor: '#000',
-                shadowOpacity: 0.1,
-                shadowOffset: { width: 0, height: -1 },
               }
             : { display: 'none' },
         };
@@ -103,6 +100,7 @@ const BottomTabs = () => (
     <Tab.Screen name={APP_ROUTES.SETTINGS} component={SettingsScreen} />
   </Tab.Navigator>
 );
+
 
 const AppRootStack = createStackNavigator<AppRootStackParamList>();
 
