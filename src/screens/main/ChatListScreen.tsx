@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import HeaderComponent from '../../components/HeaderComponent';
 
 const dummyChats = [
   {
@@ -74,21 +75,15 @@ const ChatListScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="grey" barStyle="light-content" />
-  
-      <View style={styles.headerWrapper}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={18} color="#888" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name"
-            placeholderTextColor="#888"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-      </View>
-  
+      <HeaderComponent
+  title="Chats"
+  showBack={false}
+  rightIcons={
+    <TouchableOpacity onPress={() => console.log("New Chat")}>
+      <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
+    </TouchableOpacity>
+  }
+/>
       <FlatList
         data={filteredChats}
         keyExtractor={(item) => item.id}
@@ -99,13 +94,11 @@ const ChatListScreen = () => {
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#fff' }}>No chats found</Text>
         }
       />
-
       <TouchableOpacity style={styles.fab}>
         <Ionicons name="chatbubble" size={24} color="white" />
       </TouchableOpacity>
     </SafeAreaView>
   );
-  
 };
 
 export default ChatListScreen;

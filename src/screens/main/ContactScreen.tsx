@@ -18,6 +18,8 @@ import * as FileSystem from 'expo-file-system';
 import { supabase } from '../../services/supabase';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import HeaderComponent from '../../components/HeaderComponent';
+import { Ionicons} from '@expo/vector-icons';
 
 type RootStackParamList = {
     ContactScreen: undefined;
@@ -189,13 +191,15 @@ const ContactScreen: React.FC<Props> = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <StatusBar backgroundColor="#075E54" barStyle="light-content" />
-            <View style={styles.customHeader}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialIcons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Contact Info</Text>
-            </View>
-
+            <HeaderComponent
+  title="Contacts"
+  showBack={true}
+  rightIcons={
+    <TouchableOpacity onPress={() => console.log("Add Contact")}>
+      <Ionicons name="person-add-outline" size={24} color="white" />
+    </TouchableOpacity>
+  }
+/>
             {loading ? (
                 <ActivityIndicator size="large" color="#4CAF50" style={{ marginTop: 40 }} />
             ) : (

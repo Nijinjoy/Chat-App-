@@ -20,6 +20,7 @@ import { RootState } from '../../redux/store';
 import { fetchCurrentUser } from '../../redux/auth/authThunk';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setUser } from '../../redux/auth/authSlice';
+import HeaderComponent from '../../components/HeaderComponent';
 
 type SectionItem = {
     id: string;
@@ -155,16 +156,10 @@ useEffect(() => {
                 backgroundColor={darkMode ? '#075E54' : '#075E54'}
             />
             <SafeAreaView style={[styles.safeArea, darkMode && styles.darkSafeArea]}>
-                <View style={[styles.header, darkMode && styles.darkHeader]}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                        <Ionicons name="arrow-back" size={24} color={darkMode ? '#fff' : 'white'} />
-                    </TouchableOpacity>
-                    <Text style={[styles.headerTitle, darkMode && styles.darkHeaderTitle]}>
-                        Settings
-                    </Text>
-                    <View style={styles.headerRight} />
-                </View>
-
+            <HeaderComponent
+                     title="Settings"
+                    showBack={true}
+                  />
                 <FlatList
                     data={sections}
                     keyExtractor={(item) => item.id}
