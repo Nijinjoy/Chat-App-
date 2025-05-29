@@ -9,17 +9,23 @@ import ChatScreen from '../screens/main/ChatScreen';
 import SettingsScreen from '../screens/main/SettingScreen';
 import ContactScreen from '../screens/main/ContactScreen';
 import NotificationScreen from '../screens/main/NotificationScreen'; 
+import ProfileScreen from '../screens/main/ProfileScreen';
+import CallScreen from '../screens/main/CallScreen';
 
 export const APP_ROUTES = {
   CHATS: 'Chats',
   CONTACTS: 'Contacts',
   SETTINGS: 'Settings',
+  PROFILE: 'Profile',
+  CALLS: 'Calls',
   CHAT_DETAIL: 'ChatDetail',
   NOTIFICATIONS: 'NotificationScreen',
   MAINTABS: 'MainTabs',
 } as const;
 
-type TabRoutes = 'Chats' | 'Contacts' | 'Settings';
+
+type TabRoutes = 'Chats' | 'Contacts' | 'Settings' | 'Profile' | 'Calls';
+
 
 type ChatStackParamList = {
   ChatList: undefined;
@@ -47,44 +53,49 @@ const TabBarIcon = ({ routeName, focused, color, size }: any) => {
     Chats: focused ? 'chatbubbles' : 'chatbubbles-outline',
     Contacts: focused ? 'people' : 'people-outline',
     Settings: focused ? 'settings' : 'settings-outline',
-  };
+    Profile: focused ? 'person' : 'person-outline',
+    Calls: focused ? 'call' : 'call-outline',
+  };  
   return <Ionicons name={iconMap[routeName]} size={size} color={color} />;
 };
 
 const BottomTabs = () => (
-  <Tab.Navigator
-    initialRouteName={APP_ROUTES.CHATS}
-    tabBarPosition="bottom" 
-    screenOptions={({ route }) => ({
-      tabBarIcon: ({ focused, color }) => (
-        <TabBarIcon
-          routeName={route.name as TabRoutes}
-          focused={focused}
-          color={color}
-          size={24}
-        />
-      ),
-      swipeEnabled: true,
-      tabBarShowIcon: true,
-      tabBarActiveTintColor: 'blue',
-      tabBarInactiveTintColor: 'gray',
-      tabBarIndicatorStyle: {  height: 0, },
-      tabBarStyle: {
-        height: 60,
-        backgroundColor: '#ffffff',
-        elevation: 10,
-      },
-      tabBarLabelStyle: { display: 'none' },
-    })}
-  >
+<Tab.Navigator
+  initialRouteName={APP_ROUTES.CHATS}
+  tabBarPosition="bottom"
+  screenOptions={({ route }) => ({
+    tabBarIcon: ({ focused, color }) => (
+      <TabBarIcon
+        routeName={route.name as TabRoutes}
+        focused={focused}
+        color={color}
+        size={20}
+      />
+    ),
+    swipeEnabled: true,
+    tabBarShowIcon: true,
+    tabBarActiveTintColor: 'blue',
+    tabBarInactiveTintColor: 'gray',
+    tabBarIndicatorStyle: { height: 0 },
+    tabBarStyle: {
+      height: 60,
+      backgroundColor: '#ffffff',
+      elevation: 10,
+    },
+    tabBarLabelStyle: {
+      fontSize: 12,
+      textAlign: 'center',
+    },
+  })}
+>
     <Tab.Screen
       name={APP_ROUTES.CHATS}
       component={ChatStackScreen}
       options={({ route }) => {
         const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatList';
         const isChatList = routeName === 'ChatList';
-
         return {
+          tabBarLabel: 'Chats',
           tabBarStyle: isChatList
             ? {
                 height: 60,
@@ -96,8 +107,10 @@ const BottomTabs = () => (
         };
       }}
     />
-    <Tab.Screen name={APP_ROUTES.CONTACTS} component={ContactScreen} />
-    <Tab.Screen name={APP_ROUTES.SETTINGS} component={SettingsScreen} />
+        <Tab.Screen name={APP_ROUTES.CALLS} component={CallScreen}   options={{ tabBarLabel: 'Calls' }}/>
+    <Tab.Screen name={APP_ROUTES.CONTACTS} component={ContactScreen}   options={{ tabBarLabel: 'Contacts' }}/>
+    <Tab.Screen name={APP_ROUTES.PROFILE} component={ProfileScreen}   options={{ tabBarLabel: 'Profile' }}/>
+<Tab.Screen name={APP_ROUTES.SETTINGS} component={SettingsScreen}   options={{ tabBarLabel: 'Settings' }}/>
   </Tab.Navigator>
 );
 
