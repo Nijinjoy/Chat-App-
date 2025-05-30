@@ -11,7 +11,6 @@ export default function App(): JSX.Element {
     <GestureHandlerRootView style={styles.container}>
       <Provider store={store}>
       <RootNavigator />
-      <StatusBar style="auto" />
       </Provider>
     </GestureHandlerRootView>
   );

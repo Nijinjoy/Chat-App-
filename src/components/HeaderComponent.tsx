@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 70,
     paddingHorizontal: 15,
-    paddingTop: Platform.OS === "android" ? 50 : 20,
+    paddingTop: Platform.OS === "android" ? 30 : 20,
     paddingBottom: 10,
   },
   headerLeft: {
