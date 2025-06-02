@@ -25,14 +25,12 @@ import { useDispatch } from 'react-redux';
 
 const { width, height } = Dimensions.get('window');
 
-// 1. Define Navigation Param Props
 type AuthStackParamList = {
   LOGIN: undefined;
   REGISTER: undefined;
 };
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'REGISTER'>;
-// 2. Define Form and Error Types
 interface FormState {
   fullName: string;
   email: string;
@@ -154,24 +152,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.formContainer}>
-            <View style={styles.inputWrapper}>
-              <PhoneInput
-                ref={phoneInput}
-                defaultValue={phoneNumber}
-                defaultCode="US"
-                layout="first"
-                onChangeFormattedText={(text) => {
-                  setPhoneNumber(text);
-                  handleChange('phone', text);
-                }}
-                containerStyle={styles.phoneContainer}
-                textContainerStyle={styles.phoneTextContainer}
-                textInputStyle={styles.phoneInput}
-                codeTextStyle={styles.phoneCode}
-                flagButtonStyle={styles.flagButton}
-              />
-              {errors.phone && <Text style={styles.error}>{errors.phone}</Text>}
-            </View>
+  
 
             {fields.map((field) => (
               <View key={field.name} style={styles.inputWrapper}>
