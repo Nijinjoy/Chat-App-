@@ -23,9 +23,7 @@ export const APP_ROUTES = {
   MAINTABS: 'MainTabs',
 } as const;
 
-
 type TabRoutes = 'Chats' | 'Contacts' | 'Settings' | 'Profile' | 'Calls';
-
 
 type ChatStackParamList = {
   ChatList: undefined;
@@ -54,65 +52,69 @@ const TabBarIcon = ({ routeName, focused, color, size }: any) => {
     Contacts: focused ? 'people' : 'people-outline',
     Settings: focused ? 'settings' : 'settings-outline',
     Profile: focused ? 'person' : 'person-outline',
-    Calls: focused ? 'call' : 'call-outline',
+    // Calls: focused ? 'call' : 'call-outline',
   };  
   return <Ionicons name={iconMap[routeName]} size={size} color={color} />;
 };
+const BottomTabs = ({ navigation, route }) => {
+  const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatList';
+  const hideTabBar = routeName === 'ChatDetail';
 
-const BottomTabs = () => (
-<Tab.Navigator
-  initialRouteName={APP_ROUTES.CHATS}
-  tabBarPosition="bottom"
-  screenOptions={({ route }) => ({
-    tabBarIcon: ({ focused, color }) => (
-      <TabBarIcon
-        routeName={route.name as TabRoutes}
-        focused={focused}
-        color={color}
-        size={20}
+  return (
+    <Tab.Navigator
+      initialRouteName={APP_ROUTES.CHATS}
+      tabBarPosition="bottom"
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color }) => (
+          <TabBarIcon
+            routeName={route.name as TabRoutes}
+            focused={focused}
+            color={color}
+            size={20}
+          />
+        ),
+        swipeEnabled: true,
+        tabBarShowIcon: true,
+        tabBarActiveTintColor: 'blue',
+        tabBarInactiveTintColor: 'gray',
+        tabBarIndicatorStyle: { height: 0 },
+        tabBarStyle: hideTabBar
+          ? { display: 'none' }
+          : {
+              height: 60,
+              backgroundColor: '#ffffff',
+              elevation: 10,
+            },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          textAlign: 'center',
+        },
+      })}
+    >
+      <Tab.Screen
+        name={APP_ROUTES.CHATS}
+        component={ChatStackScreen}
+        options={{ tabBarLabel: 'Chats' }}
       />
-    ),
-    swipeEnabled: true,
-    tabBarShowIcon: true,
-    tabBarActiveTintColor: 'blue',
-    tabBarInactiveTintColor: 'gray',
-    tabBarIndicatorStyle: { height: 0 },
-    tabBarStyle: {
-      height: 60,
-      backgroundColor: '#ffffff',
-      elevation: 10,
-    },
-    tabBarLabelStyle: {
-      fontSize: 12,
-      textAlign: 'center',
-    },
-  })}
->
-    <Tab.Screen
-      name={APP_ROUTES.CHATS}
-      component={ChatStackScreen}
-      options={({ route }) => {
-        const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatList';
-        const isChatList = routeName === 'ChatList';
-        return {
-          tabBarLabel: 'Chats',
-          tabBarStyle: isChatList
-            ? {
-                height: 60,
-                backgroundColor: '#ffffff',
-                borderTopWidth: 0,
-                elevation: 10,
-              }
-            : { display: 'none' },
-        };
-      }}
-    />
-        <Tab.Screen name={APP_ROUTES.CALLS} component={CallScreen}   options={{ tabBarLabel: 'Calls' }}/>
-    <Tab.Screen name={APP_ROUTES.CONTACTS} component={ContactScreen}   options={{ tabBarLabel: 'Contacts' }}/>
-    <Tab.Screen name={APP_ROUTES.PROFILE} component={ProfileScreen}   options={{ tabBarLabel: 'Profile' }}/>
-<Tab.Screen name={APP_ROUTES.SETTINGS} component={SettingsScreen}   options={{ tabBarLabel: 'Settings' }}/>
-  </Tab.Navigator>
-);
+      <Tab.Screen
+        name={APP_ROUTES.PROFILE}
+        component={ProfileScreen}
+        options={{ tabBarLabel: 'Profile' }}
+      />
+      <Tab.Screen
+        name={APP_ROUTES.CONTACTS}
+        component={ContactScreen}
+        options={{ tabBarLabel: 'Contacts' }}
+      />
+      <Tab.Screen
+        name={APP_ROUTES.SETTINGS}
+        component={SettingsScreen}
+        options={{ tabBarLabel: 'Settings' }}
+      />
+    </Tab.Navigator>
+  );
+};
+
 
 
 const AppRootStack = createStackNavigator<AppRootStackParamList>();
@@ -121,7 +123,11 @@ export default function AppStack() {
   return (
 <AppRootStack.Navigator screenOptions={{ headerShown: false }}>
   <AppRootStack.Screen name={APP_ROUTES.NOTIFICATIONS} component={NotificationScreen} />
-  <AppRootStack.Screen name={APP_ROUTES.MAINTABS} component={BottomTabs} />
+  <AppRootStack.Screen name={APP_ROUTES.MAINTABS} component={BottomTabs} 
+    options={({ route }) => ({
+      headerShown: false,
+    })}
+  />
 </AppRootStack.Navigator>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { Buffer } from 'buffer';
 import HeaderComponent from '../../components/HeaderComponent';
+import { supabase } from '../../services/supabase';
 
 const ProfileScreen: React.FC = () => {
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -20,42 +22,117 @@ const ProfileScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
+  useEffect(() => {
+    fetchUserDetails();
+  }, []);
+
+  const fetchUserDetails = async () => {
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser();
+    if (userError) {
+      Alert.alert('Error', 'Failed to get user');
+      console.error('User fetch error:', userError);
+      return;
+    }
+    console.log('Authenticated User:', user);
+    const fullName = user.user_metadata?.full_name || '';
+    const userEmail = user.email || '';
+    const userId = user.id;
+    setEmail(userEmail);
+    setUsername(fullName);
+    const { data: profile, error: profileError } = await supabase
+      .from('users') 
+      .select('full_name, phone, avatar_url')
+      .eq('id', userId)
+      .single();
+    if (profileError) {
+      Alert.alert('Error', 'Failed to fetch profile');
+      console.error('Profile fetch error:', profileError);
+      return;
+    }
+    console.log('User Profile:', profile);
+    setPhone(profile.phone || '');
+    setImageUri(profile.avatar_url || null);
+  };
+
   const handleChoosePhoto = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert('Permission denied', 'We need permission to access photos');
       return;
     }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5,
-      allowsEditing: true,
-    });
-
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setImageUri(result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+        allowsEditing: true,
+        aspect: [1, 1],
+        base64: true,
+      });
+      console.log('Selected image result:', result);
+      if (result.canceled || !result.assets?.[0]?.base64) {
+        Alert.alert('No image selected or base64 data missing');
+        return;
+      }
+      const base64Str = result.assets[0].base64;
+      const localUri = result.assets[0].uri;
+      const fileName = localUri.split('/').pop() || `image_${Date.now()}`;
+      const fileExt = fileName.split('.').pop() || 'jpg';
+      const uniqueFileName = `${Date.now()}.${fileExt}`;
+      const mimeType = result.assets[0].mimeType || `image/${fileExt}`;
+      const buffer = Buffer.from(base64Str, 'base64');
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(uniqueFileName, buffer, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: mimeType,
+        });
+  
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        Alert.alert('Error', 'Failed to upload image');
+        return;
+      }
+      const { data: publicURLData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(uniqueFileName);
+  
+      const publicUrl = publicURLData?.publicUrl;
+      if (!publicUrl) {
+        Alert.alert('Error', 'Failed to retrieve image URL');
+        return;
+      }
+      setImageUri(publicUrl);
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+  
+      if (userError) {
+        console.error('User fetch error:', userError);
+        return;
+      }
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+  
+      if (updateError) {
+        console.error('Update error:', updateError);
+        Alert.alert('Error', 'Failed to update profile image');
+      } else {
+        Alert.alert('Success', 'Profile image updated successfully');
+      }
+    } catch (error) {
+      console.error('Image picker or upload error:', error);
+      Alert.alert('Error', 'Something went wrong while uploading the image');
     }
   };
-
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', onPress: () => console.log('User logged out') },
-    ]);
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action is irreversible. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => console.log('Account deleted') },
-      ]
-    );
-  };
-
+  
+  
   return (
     <SafeAreaView style={styles.safeArea}>
       <HeaderComponent title="My Profile" showBack />
@@ -94,19 +171,6 @@ const ProfileScreen: React.FC = () => {
             placeholderTextColor="#888"
           />
         </View>
-
-        <View style={styles.inputWrapper}>
-          <Text style={styles.label}>Phone Number</Text>
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            placeholder="Enter your phone number"
-            keyboardType="phone-pad"
-            style={styles.input}
-            placeholderTextColor="#888"
-          />
-        </View>
-
         <TouchableOpacity style={styles.saveButton}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>
@@ -130,7 +194,6 @@ const ProfileScreen: React.FC = () => {
 }}>
   <Text style={styles.deleteText}>Delete Account</Text>
 </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -217,13 +280,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   deleteButton: {
-    backgroundColor: '#ffebee',
     paddingVertical: 12,
-    borderRadius: 10,
     alignItems: 'center',
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#c62828',
   },
   deleteText: {
     color: '#c62828',

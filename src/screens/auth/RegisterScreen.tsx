@@ -12,16 +12,16 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import PhoneInput from 'react-native-phone-number-input';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AppDispatch } from '../../redux/store';
+import { AppDispatch,RootState } from '../../redux/store';
 import { registerUser } from '../../redux/auth/authThunk';
-import { useDispatch } from 'react-redux';
+import { useDispatch ,useSelector} from 'react-redux';
+import * as Linking from 'expo-linking';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,27 +35,21 @@ interface FormState {
   fullName: string;
   email: string;
   password: string;
-  phone: string;
 }
 
 interface Errors {
   fullName?: string;
   email?: string;
   password?: string;
-  phone?: string;
 }
 
 const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   const [form, setForm] = useState<FormState>({
     fullName: '',
     email: '',
-    password: '',
-    phone: '',
+    password: ''
   });
-
   const [errors, setErrors] = useState<Errors>({});
-  const [phoneNumber, setPhoneNumber] = useState<string>('');
-  const phoneInput = useRef<PhoneInput>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch<AppDispatch>();
@@ -81,15 +75,43 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       newErrors.password = 'Password must be at least 3 characters';
       valid = false;
     }
-    if (!phoneNumber || phoneNumber.length < 6) {
-      newErrors.phone = 'Enter a valid phone number';
-      valid = false;
-    }
-
     setErrors(newErrors);
     return valid;
   };
 
+  // const handleRegister = async (): Promise<void> => {
+  //   if (!validate()) return;
+  
+  //   setLoading(true);
+  //   try {
+  //     const resultAction = await dispatch(
+  //       registerUser({
+  //         email: form.email,
+  //         password: form.password,
+  //         fullName: form.fullName
+  //       })
+  //     );
+  //     console.log('Register Response ===>', resultAction);
+  //     if (registerUser.rejected.match(resultAction)) {
+  //       const errorMessage =
+  //         (resultAction.payload as string) || 'Registration failed';
+  //       Alert.alert('Registration Error', errorMessage);
+  //       return;
+  //     }
+  //     Alert.alert(
+  //       'Verify Email',
+  //       'A confirmation email has been sent. Please check your inbox.'
+  //     );
+  //     navigation.navigate(AUTH_ROUTES.LOGIN);
+  //   } catch (err: unknown) {
+  //     const errorMessage =
+  //       err instanceof Error ? err.message : 'Something went wrong';
+  //     Alert.alert('Registration Error', errorMessage);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  
   const handleRegister = async (): Promise<void> => {
     if (!validate()) return;
   
@@ -100,10 +122,11 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           email: form.email,
           password: form.password,
           fullName: form.fullName,
-          // phone: phoneNumber,
         })
       );
-      console.log('Register Response =>', resultAction);
+  
+      console.log('Register Response ===>', resultAction);
+  
       if (registerUser.rejected.match(resultAction)) {
         const errorMessage =
           (resultAction.payload as string) || 'Registration failed';
@@ -111,11 +134,22 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         return;
       }
       Alert.alert(
-        'Verify Email',
-        'A confirmation email has been sent. Please check your inbox.'
+        'Verify Your Email',
+        'A confirmation email has been sent. Please check your inbox and confirm your email.',
+        [
+          {
+            text: 'Open Email App',
+            onPress: () => {
+              Linking.openURL('mailto:');
+            },
+          },
+          {
+            text: 'OK',
+            style: 'cancel',
+          },
+        ]
       );
-      // navigation.navigate(AUTH_ROUTES.LOGIN);
-      // navigation.navigate('NotificationScreen');
+      navigation.navigate(AUTH_ROUTES.LOGIN);
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : 'Something went wrong';
@@ -152,8 +186,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.formContainer}>
-  
-
             {fields.map((field) => (
               <View key={field.name} style={styles.inputWrapper}>
                 <View style={[styles.inputContainer, errors[field.name] && styles.inputError]}>
@@ -186,7 +218,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 {errors[field.name] && <Text style={styles.error}>{errors[field.name]}</Text>}
               </View>
             ))}
-
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleRegister}
@@ -199,7 +230,6 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
                 <Text style={styles.buttonText}>Register</Text>
               )}
             </TouchableOpacity>
-
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Already have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate(AUTH_ROUTES.LOGIN)}>

@@ -18,7 +18,8 @@ interface ButtonComponentProps {
     onPress: (event: GestureResponderEvent) => void;
     loading?: boolean;
     disabled?: boolean;
-    icon?: ImageSourcePropType;
+    icon?: ImageSourcePropType; // for image icons
+    iconComponent?: React.ReactNode;
     style?: StyleProp<ViewStyle>;
     textStyle?: StyleProp<TextStyle>;
     backgroundColor?: string;
@@ -32,6 +33,7 @@ const ButtonComponent: React.FC<ButtonComponentProps> = ({
     loading = false,
     disabled = false,
     icon,
+    iconComponent,
     style = {},
     textStyle = {},
     backgroundColor = '#4A80F0',
@@ -58,7 +60,8 @@ const ButtonComponent: React.FC<ButtonComponentProps> = ({
                 <ActivityIndicator color={textColor} />
             ) : (
                 <View style={styles.content}>
-                    {icon && <Image source={icon} style={styles.icon} />}
+               {iconComponent}
+  {icon && <Image source={icon} style={styles.icon} />}
                     <Text style={[styles.text, { color: border ? '#2d3436' : textColor }, textStyle]}>
                         {title}
                     </Text>

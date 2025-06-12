@@ -18,7 +18,23 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.impetors.chatapp-reactnative"
+      "bundleIdentifier": "com.impetors.chatapp-reactnative",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "wechat"
+            ]
+          }
+        ],
+        "LSApplicationQueriesSchemes": [
+          "googlechrome",
+          "googlechromes"
+        ]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +43,20 @@
       },
       "package": "com.impetors.chatapp_reactnative",
       "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "wechat",
+              "host": "auth-callback",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
         {
           "action": "VIEW",
           "data": [
@@ -46,10 +76,12 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
+      "supabaseUrl": "https://ovpqfvivvwdbvcopyhun.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92cHFmdml2dndkYnZjb3B5aHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0MTU3NTQsImV4cCI6MjA2MTk5MTc1NH0.7WGH_uVJbBtCVOPApxb1w7djC5_JPv_dafpDF-lelgs",
       "eas": {
-        "projectId": "dbd655f7-f60a-45ba-93b8-83faf8015e66"
+        "projectId": "c374a354-37ff-44c1-b4f1-90e6c1fe02f7"
       }
     },
-    "owner": "impetors"
+    "owner": "nijin_1999"
   }
 }

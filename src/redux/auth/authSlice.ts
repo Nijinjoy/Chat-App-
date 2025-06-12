@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { User } from '@supabase/supabase-js';
-import { loginUser, registerUser } from './authThunk';
+import { loginUser, registerUser, fetchCurrentUser, signOutUser } from './authThunk';
 
 // Define the AuthState interface
 interface AuthState {
@@ -66,7 +66,31 @@ const authSlice = createSlice({
         state.registerLoading = false;
         state.registerError =
           (action.payload as string) || action.error.message || 'Registration failed';
+      })
+            // FETCH CURRENT USER
+            .addCase(fetchCurrentUser.pending, (state) => {
+              state.loginLoading = true;
+              state.loginError = null;
+            })
+            .addCase(fetchCurrentUser.fulfilled, (state, action: PayloadAction<User>) => {
+              state.loginLoading = false;
+              state.user = action.payload;
+            })
+            .addCase(fetchCurrentUser.rejected, (state, action) => {
+              state.loginLoading = false;
+              state.loginError =
+                (action.payload as string) || action.error.message || 'User not found';
+              state.user = null;
+            })
+                  // SIGN OUT
+      .addCase(signOutUser.fulfilled, (state) => {
+        state.user = null;
+      })
+      .addCase(signOutUser.rejected, (state, action) => {
+        state.loginError =
+          (action.payload as string) || action.error.message || 'Sign-out failed';
       });
+      
   },
 });
 

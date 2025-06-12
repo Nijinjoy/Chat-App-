@@ -66,9 +66,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    minHeight: 70,
+    minHeight: 50,
     paddingHorizontal: 15,
-    paddingTop: Platform.OS === "android" ? 30 : 20,
+    paddingTop: Platform.OS === "android" ? 20 : 20,
     paddingBottom: 10,
   },
   headerLeft: {

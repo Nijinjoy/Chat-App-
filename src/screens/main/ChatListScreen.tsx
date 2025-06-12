@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,71 +10,73 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import HeaderComponent from '../../components/HeaderComponent';
-
-const dummyChats = [
-  {
-    id: '1',
-    name: 'Alice Johnson',
-    avatar: '',
-    lastMessage: 'Hey, how are you?',
-    time: '10:45 AM',
-    unreadCount: 2,
-  },
-  {
-    id: '2',
-    name: 'Bob Smith',
-    avatar: '',
-    lastMessage: 'Let’s catch up later!',
-    time: '09:30 AM',
-    unreadCount: 0,
-  },
-  {
-    id: '3',
-    name: 'Catherine Adams',
-    avatar: '',
-    lastMessage: 'Thanks for the update.',
-    time: 'Yesterday',
-    unreadCount: 1,
-  },
-];
-
-const ChatItem = ({ chat, onPress }) => (
-  <TouchableOpacity style={styles.chatItem} onPress={onPress}>
-    <View style={styles.avatarPlaceholder}>
-      <Text style={styles.avatarText}>{chat.name[0]}</Text>
-    </View>
-    <View style={styles.chatContent}>
-      <View style={styles.chatHeader}>
-        <Text style={styles.chatName}>{chat.name}</Text>
-        <Text style={styles.chatTime}>{chat.time}</Text>
-      </View>
-      <View style={styles.chatFooter}>
-        <Text style={styles.chatMessage} numberOfLines={1}>
-          {chat.lastMessage}
-        </Text>
-        {chat.unreadCount > 0 && (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadText}>{chat.unreadCount}</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  </TouchableOpacity>
-);
+import { supabase } from '../../services/supabase';
+import ChatItem from '../../components/ChatItem';
+import { useNavigation } from '@react-navigation/native';
+import { APP_ROUTES } from '../../navigation/AppStack';
 
 const ChatListScreen = () => {
-    const [searchQuery, setSearchQuery] = useState('');
+  const navigation = useNavigation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [user, setUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const filteredChats = dummyChats.filter(chat =>
-      chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  useEffect(() => {
+    const sessionUser = supabase.auth.getUser().then(({ data, error }) => {
+      if (error) {
+        console.log('Error fetching user:', error.message);
+      } else {
+        setUser(data.user);
+      }
+    });
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from('users') 
+        .select('id, email, full_name, avatar_url')
+        .neq('id', user.id) 
+        .order('full_name', { ascending: true });
+      if (error) {
+        console.log('Error fetching users:', error.message);
+      } else {
+        setUsers(data);
+      }
+    } catch (error) {
+      console.log('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+    useEffect(() => {
+      fetchUsers();
+    }, []);
+
+  const filteredUsers = users.filter(u =>
+    (u.full_name || u.email).toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 50 }} />
+      </SafeAreaView>
     );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar backgroundColor="grey" barStyle="light-content" />
+      {/* <StatusBar backgroundColor="#075E54" barStyle="light-content" /> */}
       <HeaderComponent
   title="Chats"
   showBack={false}
@@ -85,10 +87,13 @@ const ChatListScreen = () => {
   }
 />
       <FlatList
-        data={filteredChats}
+        data={filteredUsers}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <ChatItem chat={item} onPress={() => console.log('Chat pressed:', item.name)} />
+          <ChatItem
+            user={item}
+            onPress={() => navigation.navigate('ChatDetail', { chatId: item.id,chatName:item.full_name,avatar:item.avatar_url })}
+          />
         )}
         ListEmptyComponent={
           <Text style={{ textAlign: 'center', marginTop: 20, color: '#fff' }}>No chats found</Text>

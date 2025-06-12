@@ -1,5 +1,7 @@
-import logo from '../images/logo/logo.png'
-import email from '../images/email/email.png'
+
+import email from '../../assets/images/email/email.png'
+import logo from '../../assets/images/logo/logo.png'
+import google from '../../assets/images/google/google.png'
 
 
-export { logo, email }
+export { email, logo, google }

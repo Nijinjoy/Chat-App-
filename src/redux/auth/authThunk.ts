@@ -34,18 +34,12 @@ export const loginUser = createAsyncThunk<User, LoginPayload, { rejectValue: str
 interface RegisterPayload {
   email: string;
   password: string;
-  fullName?: string;
-  phone: string;
+  fullName: string;
 }
 
-// Register Thunk
-export const registerUser = createAsyncThunk<
-  User,
-  RegisterPayload, 
-  { rejectValue: string } 
->(
+export const registerUser = createAsyncThunk<User, RegisterPayload, { rejectValue: string }>(
   'auth/registerUser',
-  async ({ email, password, fullName, phone }, { rejectWithValue }) => {
+  async ({ email, password, fullName }, { rejectWithValue }) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -53,26 +47,19 @@ export const registerUser = createAsyncThunk<
         options: {
           data: {
             full_name: fullName,
-            phone,
           },
         },
       });
-
       if (error || !data.user) {
         return rejectWithValue(error?.message || 'Registration failed');
       }
-
-      if (data?.user?.identities?.length === 0) {
+      if (data.user.identities?.length === 0) {
         return rejectWithValue('User already exists. Please log in instead.');
       }
-
-      // Save session and user info if session available
       if (data.session) {
         await AsyncStorage.setItem('auth_token', JSON.stringify(data.session));
       }
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-
-      // Upsert user info in your 'users' table
       const { error: upsertError } = await supabase
         .from('users')
         .upsert([
@@ -80,14 +67,11 @@ export const registerUser = createAsyncThunk<
             id: data.user.id,
             full_name: fullName,
             email,
-            phone,
           },
         ]);
-
       if (upsertError) {
         return rejectWithValue(upsertError.message);
       }
-
       return data.user;
     } catch (err: any) {
       return rejectWithValue(err.message || 'Registration error');
@@ -105,10 +89,7 @@ export const signOutUser = createAsyncThunk<void, void, { rejectValue: string }>
       if (error) {
         return rejectWithValue(error.message);
       }
-
-      // Clear stored session and user data
       await AsyncStorage.multiRemove(['auth_token', 'user']);
-
     } catch (err: any) {
       return rejectWithValue(err.message || 'Sign-out error');
     }
