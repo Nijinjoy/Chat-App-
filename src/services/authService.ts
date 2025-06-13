@@ -78,13 +78,11 @@ export const signOut = async (): Promise<SignOutResult> => {
       console.error('[AuthService] Supabase sign-out error:', supabaseError);
       return { success: false, error: supabaseError.message };
     }
-
     await AsyncStorage.multiRemove([
       'auth_token',
       'user_profile',
       'session_data',
     ]);
-
     console.log('[AuthService] Sign-out completed successfully');
     return { success: true };
   } catch (error: any) {

@@ -1,5 +1,6 @@
 import { createClient, Session, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import 'react-native-url-polyfill/auto';
 import { Platform } from 'react-native';
 
 const supabaseUrl: string = 'https://ovpqfvivvwdbvcopyhun.supabase.co';

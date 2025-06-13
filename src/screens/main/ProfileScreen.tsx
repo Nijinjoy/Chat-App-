@@ -15,8 +15,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Buffer } from 'buffer';
 import HeaderComponent from '../../components/HeaderComponent';
 import { supabase } from '../../services/supabase';
+import { signOut } from '../../services/authService';
+import { useNavigation } from '@react-navigation/native';
+import { AUTH_ROUTES } from '../../navigation/AuthStack';
 
 const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -131,7 +135,26 @@ const ProfileScreen: React.FC = () => {
       Alert.alert('Error', 'Something went wrong while uploading the image');
     }
   };
-  
+
+  const handleLogout = async () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: async () => {
+          const { success, error } = await signOut();
+          if (success) {
+            // Update your global auth state here
+            // For example, if using context:
+            setIsLoggedIn(false);
+          } else {
+            Alert.alert('Logout Failed', error || 'Unable to log out');
+          }
+        },
+      },
+    ]);
+  };
   
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -177,12 +200,7 @@ const ProfileScreen: React.FC = () => {
 
         <View style={styles.divider} />
 
-        <TouchableOpacity style={styles.logoutButton} onPress={() => {
-  Alert.alert('Log Out', 'Are you sure you want to log out?', [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Log Out', style: 'destructive', onPress: () => console.log('Logged out') },
-  ]);
-}}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
   <Text style={styles.logoutText}>Log Out</Text>
 </TouchableOpacity>
 

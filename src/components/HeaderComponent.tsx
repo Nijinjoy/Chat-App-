@@ -19,6 +19,8 @@ interface HeaderComponentProps {
   showAvatar?: boolean;
   showIcons?: boolean;
   showBack?: boolean;
+  showProfileIcon?: boolean; 
+  onProfilePress?: () => void;
   rightIcons?: React.ReactNode;
 }
 
@@ -30,23 +32,28 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({
   showAvatar = false,
   showIcons = false,
   showBack = false,
+  showProfileIcon = false,
   rightIcons,
+  onProfilePress,
 }) => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
+      {showProfileIcon && (
+          <TouchableOpacity onPress={onProfilePress} style={styles.iconWrapper}>
+            <Ionicons name="person-circle-outline" size={30} color="white" />
+          </TouchableOpacity>
+        )}
         {showBack && (
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
         )}
-
         {showAvatar && avatar && (
           <Image source={{ uri: avatar }} style={styles.avatar} />
         )}
-
         <View style={styles.textContainer}>
           <Text numberOfLines={1} style={styles.title}>
             {chatName || title}
@@ -54,7 +61,6 @@ const HeaderComponent: React.FC<HeaderComponentProps> = ({
           {status && <Text style={styles.status}>{status}</Text>}
         </View>
       </View>
-
       {rightIcons && <View style={styles.headerRight}>{rightIcons}</View>}
     </View>
   );
@@ -99,6 +105,10 @@ const styles = StyleSheet.create({
     color: "lightgray",
     fontSize: 12,
   },
+  iconWrapper: {
+    marginRight: 8,
+  },
+
 });
 
 export default HeaderComponent;

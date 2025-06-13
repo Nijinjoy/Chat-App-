@@ -17,7 +17,7 @@ import HeaderComponent from '../../components/HeaderComponent';
 import { supabase } from '../../services/supabase';
 import ChatItem from '../../components/ChatItem';
 import { useNavigation } from '@react-navigation/native';
-import { APP_ROUTES } from '../../navigation/AppStack';
+import { getOrCreateChatId } from '../../utils/chatUtils';
 
 const ChatListScreen = () => {
   const navigation = useNavigation();
@@ -63,28 +63,14 @@ const ChatListScreen = () => {
 
   const filteredUsers = users.filter(u =>
     (u.full_name || u.email).toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 50 }} />
-      </SafeAreaView>
-    );
-  }
+  ); 
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* <StatusBar backgroundColor="#075E54" barStyle="light-content" /> */}
       <HeaderComponent
+      showProfileIcon={true}
   title="Chats"
   showBack={false}
-  rightIcons={
-    <TouchableOpacity onPress={() => console.log("New Chat")}>
-      <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
-    </TouchableOpacity>
-  }
 />
       <FlatList
         data={filteredUsers}
@@ -92,7 +78,20 @@ const ChatListScreen = () => {
         renderItem={({ item }) => (
           <ChatItem
             user={item}
-            onPress={() => navigation.navigate('ChatDetail', { chatId: item.id,chatName:item.full_name,avatar:item.avatar_url })}
+            onPress={async () => {
+              const chatId = await getOrCreateChatId(user.id, item.id);
+              if (chatId) {
+                navigation.navigate('ChatDetail', {
+                  chatId,
+                  chatName: item.full_name,
+                  avatar: item.avatar_url,
+                  receiverId: item.id,
+                });
+              } else {
+                console.warn("Couldn't create or fetch chat.");
+              }
+            }}
+            
           />
         )}
         ListEmptyComponent={
