@@ -38,13 +38,13 @@ const ChatScreen = () => {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const scrollRef = useRef<ScrollView>(null);
   const route = useRoute();
-  const { chatId, chatName, avatar_url, receiverId } = route.params as ChatScreenParams;
+  const { chatId, chatName, avatar, receiverId } = route.params as ChatScreenParams;
 
   useEffect(() => {
     console.log('ChatScreen Params:', {
       chatId,
       chatName,
-      avatar_url,
+      avatar,
       receiverId,
     });
   }, []);
@@ -82,11 +82,8 @@ const ChatScreen = () => {
       fetchMessages();
     }, [chatId]);
 
-
-  // Listen for new messages in real-time
   useEffect(() => {
     if (!chatId || !currentUserId) return;
-
     const channel = supabase
       .channel(`chat:${chatId}`)
       .on(
@@ -108,9 +105,7 @@ const ChatScreen = () => {
       supabase.removeChannel(channel);
     };
   }, [chatId, currentUserId]);
-
-  
-  
+ 
     const formatTime = (timestamp: string) => {
       const date = new Date(timestamp);
       let hours = date.getHours();
@@ -120,7 +115,6 @@ const ChatScreen = () => {
       minutes = minutes < 10 ? '0' + minutes : minutes;
       return `${hours}:${minutes} ${ampm}`;
     };
-  
   
     const handleSend = async () => {
       if (!message.trim() || !currentUserId) return;
@@ -158,8 +152,10 @@ const ChatScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <HeaderComponent
-
-  showBack={false}
+  chatName={chatName}
+  showBack={true}
+  avatar={avatar || undefined}
+  showAvatar={!!avatar}
 />
       <ScrollView
         contentContainerStyle={styles.chatContainer}
