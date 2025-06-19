@@ -11,6 +11,14 @@
     "experiments": {
       "turboModules": false
     },
+    "plugins": [
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "development"
+        }
+      ]
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -41,6 +49,8 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
       "package": "com.impetors.chatapp_reactnative",
       "intentFilters": [
         {
@@ -78,10 +88,29 @@
     "extra": {
       "supabaseUrl": "https://ovpqfvivvwdbvcopyhun.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92cHFmdml2dndkYnZjb3B5aHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0MTU3NTQsImV4cCI6MjA2MTk5MTc1NH0.7WGH_uVJbBtCVOPApxb1w7djC5_JPv_dafpDF-lelgs",
+      "oneSignalAppId": "95edd06b-3b42-415b-a66a-5fa300c3ddf2",
+      "fcmApiKey": "AAAAzxalZzM:APA91bHuQCdc2UhXgFwSfuESqlJucqz_Y-7parXLbrFjOfXDVxu78El_dp6JPhl_vUYHtArUF6HCl0EFNKc8MdYoMqBj2trsVoUh00l-Pa1N6Gdjnq6b9Dv0Cv9HeQiYmw0vsjWJyGAl",
       "eas": {
-        "projectId": "c374a354-37ff-44c1-b4f1-90e6c1fe02f7"
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.impetors.chatapp-reactnative.OneSignalNotificationServiceExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.impetors.chatapp-reactnative.onesignal"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "dbd655f7-f60a-45ba-93b8-83faf8015e66"
       }
     },
-    "owner": "nijin_1999"
+    "owner": "impetors"
   }
 }

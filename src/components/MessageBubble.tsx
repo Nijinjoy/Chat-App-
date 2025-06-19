@@ -1,13 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const MessageBubble = ({ text, time, sender }) => {
+const MessageBubble = ({ text, time, sender, replyTo, onReply }) => {
   const isMe = sender === 'me';
+
   return (
-    <View style={[styles.message, isMe ? styles.myMessage : styles.otherMessage]}>
+    <TouchableOpacity
+      onLongPress={() => onReply && onReply()}
+      activeOpacity={0.8}
+      style={[styles.message, isMe ? styles.myMessage : styles.otherMessage]}
+    >
+      {/* Show reply preview if exists */}
+      {replyTo && (
+        <View style={styles.replyContainer}>
+          <Text style={styles.replyLabel}>Replying to:</Text>
+          <Text style={styles.replyText} numberOfLines={1}>
+            {replyTo}
+          </Text>
+        </View>
+      )}
       <Text style={styles.text}>{text}</Text>
       <Text style={styles.time}>{time}</Text>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -26,6 +40,21 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#FFF',
   },
+  replyContainer: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#888',
+    paddingLeft: 6,
+    marginBottom: 4,
+  },
+  replyLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#555',
+  },
+  replyText: {
+    fontSize: 12,
+    color: '#333',
+  },
   text: {
     fontSize: 16,
   },
@@ -33,7 +62,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'right',
     marginTop: 4,
+    color: '#555',
   },
 });
 
 export default MessageBubble;
+

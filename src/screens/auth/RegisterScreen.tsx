@@ -17,7 +17,6 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AUTH_ROUTES } from '../../navigation/AuthStack';
 import LottieView from 'lottie-react-native';
 import { register } from '../../assets/animations';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AppDispatch,RootState } from '../../redux/store';
 import { registerUser } from '../../redux/auth/authThunk';
 import { useDispatch ,useSelector} from 'react-redux';
@@ -167,7 +166,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
   ] as const;
 
   return (
-    <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={styles.gradient}>
+<View style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
@@ -239,13 +238,19 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </LinearGradient>
+    </View>
   );
 };
 
 export default RegisterScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    // justifyContent: 'center',
+    // alignItems: 'center',
+    backgroundColor: '#d1f0e1', 
+  },  
     gradient: {
         flex: 1,
     },

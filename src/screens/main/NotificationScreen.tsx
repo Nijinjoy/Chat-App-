@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,25 +7,96 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
+  Platform,
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { supabase } from '../../services/supabase';
 import { notificatioon } from '../../assets/animations';
 import type { RootStackParamList } from '../../types/navigation';
 import { APP_ROUTES } from '../../navigation/AppStack';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { supabase } from '../../services/supabase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Notification'>;
 
 const NotificationScreen: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation<NavigationProp>();
 
-  const registerForPushNotificationsAsync = async (): Promise<void> => {
-    navigation.navigate(APP_ROUTES.MAINTABS);
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification Received in Foreground:', notification);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    try {
+      setLoading(true);
+
+      if (!Device.isDevice) {
+        Alert.alert('Physical Device Required', 'Push notifications only work on real devices.');
+        return;
+      }
+
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        Alert.alert('Permission Denied', 'Notification permission was not granted.');
+        return;
+      }
+
+      const tokenData = await Notifications.getExpoPushTokenAsync();
+      const token = tokenData.data;
+      console.log('Expo Push Token:', token);
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+
+      if (userError || !userId) {
+        console.error('User fetch error:', userError?.message);
+        Alert.alert('Error', 'Unable to retrieve user info.');
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ push_token: token })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError.message);
+        Alert.alert('Error', 'Failed to save push token.');
+        return;
+      }
+
+      navigation.replace(APP_ROUTES.MAINTABS);
+    } catch (error) {
+      console.error('Notification setup error:', error);
+      Alert.alert('Unexpected Error', 'Failed to enable notifications.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +120,7 @@ const NotificationScreen: React.FC = () => {
 
         <TouchableOpacity
           style={[styles.actionButton, styles.enableButton]}
-          onPress={registerForPushNotificationsAsync}
+          onPress={handleEnableNotifications}
           disabled={loading}
         >
           {loading ? (
@@ -66,54 +137,51 @@ const NotificationScreen: React.FC = () => {
 export default NotificationScreen;
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  safeArea: { flex: 1, backgroundColor: '#fff' },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   lottie: {
-    width: 250,
-    height: 250,
+    width: 200,
+    height: 200,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 20,
+    fontWeight: '600',
+    marginVertical: 16,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginVertical: 10,
     color: '#666',
-    paddingHorizontal: 20,
   },
   buttonContainer: {
-    paddingHorizontal: 30,
-    paddingBottom: 20,
-    paddingTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    padding: 20,
   },
   actionButton: {
     paddingVertical: 14,
-    borderRadius: 25,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    minWidth: 140,
     alignItems: 'center',
-    marginBottom: 10,
   },
   denyButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#eee',
   },
   enableButton: {
-    backgroundColor: '#32a852',
+    backgroundColor: '#007BFF',
   },
   denyText: {
     color: '#333',
-    fontSize: 16,
+    fontWeight: '500',
   },
   enableText: {
     color: '#fff',
-    fontSize: 16,
+    fontWeight: '600',
   },
 });

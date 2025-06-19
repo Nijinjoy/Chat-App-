@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { chatAnimation, loadingDots } from '../../assets/animations';
 import { supabase } from '../../services/supabase';
@@ -57,7 +56,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
   }, []);
 
   return (
-    <LinearGradient colors={['#d1f0e1', '#ffffff']} style={styles.container}>
+<View style={styles.container}> 
       <Animated.View style={[styles.logoContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <LottieView
           source={chatAnimation}
@@ -76,16 +75,17 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
         <LottieView source={loadingDots} autoPlay loop style={styles.loadingAnimation} />
         <Text style={styles.loadingText}>Preparing your experience...</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
+    alignItems: 'center',
+    backgroundColor: '#d1f0e1', // or your preferred solid background color
+  },  
   logoContainer: {
     marginBottom: 30,
   },

@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { login } from '../../assets/animations';
 import InputComponent from '../../components/InputComponent';
@@ -149,7 +148,7 @@ const fields = [
     ] as const;
 
     return (
-        <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={styles.gradient}>
+<View style={styles.container}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoid}
@@ -213,7 +212,7 @@ const fields = [
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </LinearGradient>
+        </View>
     );
 };
 
@@ -232,6 +231,13 @@ const styles = StyleSheet.create({
     socialLoginContainer: { alignItems: 'center' },
     orText: { fontSize: 14, color: '#636e72' },
     socialButton: { width: '100%', marginTop: 10 },
+    container: {
+      flex: 1,
+      // justifyContent: 'center',
+      // alignItems: 'center',
+      backgroundColor: '#d1f0e1', 
+    },
+    
 });
 
 export default LoginScreen;

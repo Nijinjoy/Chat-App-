@@ -27,18 +27,19 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="wechat"/>
-        <data android:scheme="com.impetors.chatapp_reactnative"/>
         <data android:scheme="exp+chatappreactnative"/>
       </intent-filter>
       <intent-filter data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
         <data android:scheme="wechat" android:host="auth-callback" android:pathPrefix="/"/>
+        <data android:scheme="exp+chatappreactnative"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
       <intent-filter data-generated="true">
         <action android:name="android.intent.action.VIEW"/>
         <data android:scheme="wechat" android:host="verify-email"/>
+        <data android:scheme="exp+chatappreactnative"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>

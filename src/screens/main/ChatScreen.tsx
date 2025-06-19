@@ -12,9 +12,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import MessageBubble from '../../components/MessageBubble';
 import { useRoute } from '@react-navigation/native';
-import { useChatMessages } from '../../hooks/useChatMessages';
 import { supabase } from '../../services/supabase';
 import HeaderComponent from '../../components/HeaderComponent';
+import { groupMessagesByDate } from '../../utils/groupMessagesByDate';
+
 
 type ChatScreenParams = {
   chatId: string;
@@ -30,6 +31,7 @@ type Message = {
   sender_id: string;
   receiver_id: string;
   created_at: string;
+  reply_to_message?: string | null;
 }
 
 const ChatScreen = () => {
@@ -39,6 +41,8 @@ const ChatScreen = () => {
   const scrollRef = useRef<ScrollView>(null);
   const route = useRoute();
   const { chatId, chatName, avatar, receiverId } = route.params as ChatScreenParams;
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+
 
   useEffect(() => {
     console.log('ChatScreen Params:', {
@@ -61,7 +65,6 @@ const ChatScreen = () => {
       getUser();
     }, []);
 
-    // Load previous messages
     useEffect(() => {
       const fetchMessages = async () => {
         if (!chatId) return;
@@ -115,29 +118,93 @@ const ChatScreen = () => {
       minutes = minutes < 10 ? '0' + minutes : minutes;
       return `${hours}:${minutes} ${ampm}`;
     };
-  
+
+    const getOriginalMessageText = (replyId: string) => {
+      const original = messages.find((msg) => msg.id === replyId);
+      return original ? original.message : '';
+    };
+
     const handleSend = async () => {
-      if (!message.trim() || !currentUserId) return;
-  
-      const { data, error, status, statusText } = await supabase
-        .from('messages')
-        .insert([
-          {
-            chat_id: chatId,
-            sender_id: currentUserId,
-            receiver_id: receiverId,
-            message: message.trim(),
-          },
-        ])
-        .select();
-  
-      if (error) {
-        console.error('Send message failed:', error.message);
-      } else {
-        console.log('Message sent successfully:', { data, status, statusText });
+      if (!message.trim() || !currentUserId) {
+        console.warn('Empty message or user not logged in');
+        return;
+      }
+    
+      const trimmedMessage = message.trim();
+      console.log('Sending message:', trimmedMessage);
+    
+      try {
+        // 1. Insert message
+        const { data: insertData, error: insertError } = await supabase
+          .from('messages')
+          .insert([
+            {
+              chat_id: chatId,
+              sender_id: currentUserId,
+              receiver_id: receiverId,
+              message: trimmedMessage,
+            },
+          ])
+          .select();
+    
+        if (insertError) {
+          console.error('❌ Error inserting message:', insertError.message);
+          return;
+        }
+        console.log('✅ Message inserted:', insertData);
         setMessage('');
+        const { data: receiverData, error: receiverError } = await supabase
+          .from('users')
+          .select('push_token, full_name')
+          .eq('id', receiverId)
+          .single();
+    
+        if (receiverError) {
+          console.error('❌ Error fetching receiver push token:', receiverError.message);
+          return;
+        }
+    
+        if (!receiverData?.push_token) {
+          console.warn('⚠️ Receiver has no push token saved.');
+          return;
+        }
+    
+        const pushToken = receiverData.push_token;
+        console.log('✅ Receiver push token:', pushToken);
+        const notificationPayload = {
+          to: pushToken,
+          sound: 'default',
+          title: `New message from ${chatName}`,
+          body: trimmedMessage,
+          data: { chatId },
+        };
+    
+        console.log('📤 Sending notification with payload:', notificationPayload);
+    
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Accept-Encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(notificationPayload),
+        });
+    
+        const responseData = await response.json();
+        console.log('📩 Push API response:', responseData);
+    
+        if (responseData?.data?.status === 'error') {
+          console.warn('⚠️ Expo push API error:', responseData.data.message);
+        } else {
+          console.log('✅ Push notification sent successfully.');
+        }
+    
+      } catch (error) {
+        console.error('🔥 Unexpected error in handleSend:', error);
       }
     };
+    
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -162,14 +229,23 @@ const ChatScreen = () => {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
-       {messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            text={msg.message}
-            time={formatTime(msg.created_at)}
-            sender={msg.sender_id === currentUserId ? 'me' : 'other'}
-          />
-        ))}
+ {Object.entries(groupMessagesByDate(messages)).map(([dateLabel, dayMessages]) => (
+  <View key={dateLabel}>
+    <View style={styles.dateSeparator}>
+      <Text style={styles.dateText}>{dateLabel}</Text>
+    </View>
+    {dayMessages.map((msg) => (
+ <MessageBubble
+ key={msg.id}
+ text={msg.message}
+ time={formatTime(msg.created_at)}
+ sender={msg.sender_id === currentUserId ? 'me' : 'other'}
+ replyTo={msg.reply_to_message ? getOriginalMessageText(msg.reply_to_message) : null}
+ onReply={() => setReplyToMessage(msg)} // Sets state for the input box to show "replying to"
+/>
+    ))}
+  </View>
+))}
       </ScrollView>
       <View style={styles.inputContainer}>
         <TextInput
@@ -273,5 +349,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  dateSeparator: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  dateText: {
+    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    fontSize: 12,
+    color: '#333',
+  },
+  
 });
 
+   // const handleSend = async () => {
+    //   if (!message.trim() || !currentUserId) return;
+  
+    //   const { data, error, status, statusText } = await supabase
+    //     .from('messages')
+    //     .insert([
+    //       {
+    //         chat_id: chatId,
+    //         sender_id: currentUserId,
+    //         receiver_id: receiverId,
+    //         message: message.trim(),
+    //       },
+    //     ])
+    //     .select();
+  
+    //   if (error) {
+    //     console.error('Send message failed:', error.message);
+    //   } else {
+    //     console.log('Message sent successfully:', { data, status, statusText });
+    //     setMessage('');
+    //   }
+    // };
